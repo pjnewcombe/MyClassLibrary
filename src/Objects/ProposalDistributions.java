@@ -11,88 +11,103 @@ public class ProposalDistributions {
     private int adaptionInterval;
     private int adaptionLength;
     private int[] adapting;
-    public int nSds;  // Number of Sds total
-    public int[] acceptanceRateNumerator;
-    public int[] acceptanceRateDenominator;
-    public double[] acceptanceRate;
-    public double[] sds;
+    /**
+     * Total number of proposal distributions
+     */
+    public int numberOfProposalDistributions;  // Number of Sds total
+    /**
+     * Numerators for the acceptance rate of each proposal distribution
+     */
+    public int[] acceptanceRateNumerators;
+    /**
+     * Denominators for the acceptance rate of each proposal distribution
+     */
+    public int[] acceptanceRateDenominators;
+    /**
+     * Proposal distribution acceptance rates
+     */
+    public double[] acceptanceRates;
+    /**
+     * Proposal distribution SDs
+     */
+    public double[] proposalDistributionSds;
    
     // Contructor method has name as class
     // NewLikeData data1 = new NewLikeData(m, sg, sa)
     public ProposalDistributions(Arguments arguments, Data data) {
-        nSds = 8;
-        acceptanceRateNumerator = new int[nSds];
-        acceptanceRateDenominator = new int[nSds];
-        acceptanceRate = new double[nSds];
-        sds = new double[nSds];
-        adapting = new int[nSds];
-        sds[ParameterTypes.ALPHA.ordinal()] = arguments.proposalDistributionSdForAlpha;
+        numberOfProposalDistributions = 8;
+        acceptanceRateNumerators = new int[numberOfProposalDistributions];
+        acceptanceRateDenominators = new int[numberOfProposalDistributions];
+        acceptanceRates = new double[numberOfProposalDistributions];
+        proposalDistributionSds = new double[numberOfProposalDistributions];
+        adapting = new int[numberOfProposalDistributions];
+        proposalDistributionSds[ParameterTypes.ALPHA.ordinal()] = arguments.proposalDistributionSdForAlpha;
         adapting[ParameterTypes.ALPHA.ordinal()] = 1;
-        sds[ParameterTypes.BETAS.ordinal()] = arguments.proposalDistributionSdForBetas;
+        proposalDistributionSds[ParameterTypes.BETAS.ordinal()] = arguments.proposalDistributionSdForBetas;
         adapting[ParameterTypes.BETAS.ordinal()] = 1;
         if (data.numberOfClusters>0) {
-            sds[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()] = arguments.proposalDistributionSdForClusterIntercepts;
-            sds[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()] = arguments.proposalDistributionSdForLogBetweenClusterSd;
+            proposalDistributionSds[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()] = arguments.proposalDistributionSdForClusterIntercepts;
+            proposalDistributionSds[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()] = arguments.proposalDistributionSdForLogBetweenClusterSd;
             adapting[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()] = 1;
             adapting[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()] = 1;            
         }
-        if (data.numberOfModelSpacePartitions>0) {
-            sds[ParameterTypes.BETA_PRIOR_SD.ordinal()] = arguments.proposalDistributionSdForBetaPriorSd;
+        if (data.numberOfUnknownBetaPriors>0) {
+            proposalDistributionSds[ParameterTypes.BETA_PRIOR_SD.ordinal()] = arguments.proposalDistributionSdForBetaPriorSd;
             adapting[ParameterTypes.BETA_PRIOR_SD.ordinal()] = 1;            
         }
         if (data.survivalAnalysis==1) {
-            sds[ParameterTypes.WEIBULL_SCALE.ordinal()] = arguments.proposalDistributionSdForLogWeibullScale;
+            proposalDistributionSds[ParameterTypes.WEIBULL_SCALE.ordinal()] = arguments.proposalDistributionSdForLogWeibullScale;
             adapting[ParameterTypes.WEIBULL_SCALE.ordinal()] = 1;
         }
-        sds[ParameterTypes.BETA_ADD.ordinal()] = arguments.proposalDistributionSdForAddingBeta;
-        sds[ParameterTypes.BETA_SWAP.ordinal()] = arguments.proposalDistributionSdForSwappedInBeta;
+        proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()] = arguments.proposalDistributionSdForAddingBeta;
+        proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()] = arguments.proposalDistributionSdForSwappedInBeta;
         adaptionInterval = arguments.adaptionBinSize;
         adaptionLength = arguments.adaptionLength;
     }
     
     public void adapt(Data data, IterationValues Its, int i) {
         if (i<adaptionLength) {
-            for (int j=0; j<nSds; j++) {
+            for (int j=0; j<numberOfProposalDistributions; j++) {
                 if (adapting[j]==1) {
                     // NOTE: Order of following steps must remain for same results
                     // Reset numerator and denominator at end of bin
-                    if (acceptanceRateDenominator[j]==adaptionInterval) {
-                        acceptanceRateNumerator[j]=0;
-                        acceptanceRateDenominator[j]=0;
+                    if (acceptanceRateDenominators[j]==adaptionInterval) {
+                        acceptanceRateNumerators[j]=0;
+                        acceptanceRateDenominators[j]=0;
                     }
                     // Add 1 to denominator of parameter attempted to update
                     if (Its.whichParameterTypeUpdated ==j) {
-                        acceptanceRateDenominator[j]=acceptanceRateDenominator[j]+1;
+                        acceptanceRateDenominators[j]=acceptanceRateDenominators[j]+1;
                     }
                     // Perform adaption
-                    if (acceptanceRateDenominator[j]==adaptionInterval) { 
-                        acceptanceRate[j] = (double)acceptanceRateNumerator[j]
-                                /(double)acceptanceRateDenominator[j];
-                        if (acceptanceRate[j]>0.42) {
-                            sds[j]=sds[j]*1.01;
+                    if (acceptanceRateDenominators[j]==adaptionInterval) { 
+                        acceptanceRates[j] = (double)acceptanceRateNumerators[j]
+                                /(double)acceptanceRateDenominators[j];
+                        if (acceptanceRates[j]>0.42) {
+                            proposalDistributionSds[j]=proposalDistributionSds[j]*1.01;
                         }
-                        if (acceptanceRate[j]<0.42) {
-                            sds[j]=sds[j]*0.99;
+                        if (acceptanceRates[j]<0.42) {
+                            proposalDistributionSds[j]=proposalDistributionSds[j]*0.99;
                         }
                     }
                     // Add 1 to numerator of parameter updated if proposalAccepted
                     if (Its.proposalAccepted==1&&Its.whichParameterTypeUpdated==j) {
-                        acceptanceRateNumerator[j]=acceptanceRateNumerator[j]+1;
+                        acceptanceRateNumerators[j]=acceptanceRateNumerators[j]+1;
                     }
                 }
             }            
         } else if (i==adaptionLength) {
-            System.out.println("End of proposal SD adaption...");
-            for (int v=0; v<nSds; v++) {
+            System.out.println("Proposal distribution adaption phase complete;");
+            for (int v=0; v<numberOfProposalDistributions; v++) {
                 if (adapting[v]==1) {
-                    System.out.println(ParameterTypes.values()[v]+" acceptance rate: "+acceptanceRate[v]);
-                    System.out.println(ParameterTypes.values()[v]+" final proposal SD: "+sds[v]);                            
+                    System.out.println(ParameterTypes.values()[v]+" final acceptance rate: "+acceptanceRates[v]+" value: "+proposalDistributionSds[v]);
+                    //System.out.println(ParameterTypes.values()[v]+" final proposal SD: "+proposalDistributionSds[v]);                            
                 }
             }
             // SET ADDITION AND SWAP PROPOSAL SDS TO FRACTION OF LOGOR SD
-            sds[ParameterTypes.BETA_ADD.ordinal()] = (double)(sds[ParameterTypes.BETAS.ordinal()]);
+            proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()] = (double)(proposalDistributionSds[ParameterTypes.BETAS.ordinal()]);
             // swap SD should be smaller than addition SD
-            sds[ParameterTypes.BETA_SWAP.ordinal()] = (double)(sds[ParameterTypes.BETAS.ordinal()]/(data.totalNumberOfCovariates-data.numberOfCovariatesToFixInModel));            
+            proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()] = (double)(proposalDistributionSds[ParameterTypes.BETAS.ordinal()]/(data.totalNumberOfCovariates-data.numberOfCovariatesToFixInModel));            
         }
     }
 }

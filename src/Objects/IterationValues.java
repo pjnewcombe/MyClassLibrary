@@ -161,9 +161,9 @@ public class IterationValues {
         modelSpacePartitionDimensions = GeneralMethods.countPresVarsComps(
                 arguments.numberOfModelSpacePriorPartitions, data.modelSpacePartitionIndices, model);
         logBetweenClusterSd = Math.log(arguments.initialBetweenClusterSd);
-        logBetaPriorSd = new double[data.numberOfModelSpacePartitions];
-        betaPriorSds = new double[data.numberOfModelSpacePartitions];
-        for (int c=0; c<data.numberOfModelSpacePartitions; c++) {
+        logBetaPriorSd = new double[data.numberOfUnknownBetaPriors];
+        betaPriorSds = new double[data.numberOfUnknownBetaPriors];
+        for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
             logBetaPriorSd[c] = Math.log(arguments.initialBetaPriorSd);
             betaPriorSds[c] = Math.exp(logBetaPriorSd[c]);
         }
@@ -253,7 +253,7 @@ public class IterationValues {
             // NULL MOVE (split by whether there are random intercepts)
             if (data.numberOfClusters > 0) {
                 // NULL MOVE - Region intercepts ------------------------------
-                double paramTypeDraw = randomDraws.nextInt( (4+data.numberOfModelSpacePartitions+data.survivalAnalysis) );
+                double paramTypeDraw = randomDraws.nextInt( (4+data.numberOfUnknownBetaPriors+data.survivalAnalysis) );
                 if (paramTypeDraw == 0) {
                     updateAlpha(propsds, randomDraws);
                 } else if (paramTypeDraw == 1) {
@@ -263,8 +263,8 @@ public class IterationValues {
                 } else if (paramTypeDraw == 3) {
                     updateClusterIntercepts(propsds, randomDraws);
                 } else if (paramTypeDraw == 4) {
-                    if (data.numberOfModelSpacePartitions>0) {
-                        updateBetaPriorSd(propsds, randomDraws, data.numberOfModelSpacePartitions);                        
+                    if (data.numberOfUnknownBetaPriors>0) {
+                        updateBetaPriorSd(propsds, randomDraws, data.numberOfUnknownBetaPriors);                        
                     } else if (data.survivalAnalysis==1) {
                         updateWeibullK(propsds, randomDraws);                        
                     }
@@ -273,14 +273,14 @@ public class IterationValues {
                 }
             } else {
             // NULL MOVE for when no clusters intercepts -----------------------
-                double paramTypeDraw = randomDraws.nextInt((2+data.numberOfModelSpacePartitions+data.survivalAnalysis));
+                double paramTypeDraw = randomDraws.nextInt((2+data.numberOfUnknownBetaPriors+data.survivalAnalysis));
                 if (paramTypeDraw == 0) {
                     updateAlpha(propsds, randomDraws);
                 } else if (paramTypeDraw == 1) {
                     updateBetas(propsds, randomDraws);
                 } else if (paramTypeDraw == 2) {
-                    if (data.numberOfModelSpacePartitions>0) {
-                        updateBetaPriorSd(propsds, randomDraws, data.numberOfModelSpacePartitions);                        
+                    if (data.numberOfUnknownBetaPriors>0) {
+                        updateBetaPriorSd(propsds, randomDraws, data.numberOfUnknownBetaPriors);                        
                     } else if (data.survivalAnalysis==1) {
                         updateWeibullK(propsds, randomDraws);                        
                     }
@@ -312,7 +312,7 @@ public class IterationValues {
             Random r) {
         whichParameterTypeUpdated = ParameterTypes.ALPHA.ordinal();
         alpha = GeneralMaths.normalDraw(
-                alpha,  propsds.sds[ParameterTypes.ALPHA.ordinal()], r);
+                alpha,  propsds.proposalDistributionSds[ParameterTypes.ALPHA.ordinal()], r);
     }
     
     /**
@@ -335,7 +335,7 @@ public class IterationValues {
                     if (count==markUpdate) {
                         double newbeta = GeneralMaths.normalDraw(
                                     betas.get(m, 0), 
-                                    propsds.sds[ParameterTypes.BETAS.ordinal()], r);
+                                    propsds.proposalDistributionSds[ParameterTypes.BETAS.ordinal()], r);
                         betas.set(m, 0, newbeta);
                         whichBetaUpdated = m;
                     }
@@ -361,7 +361,7 @@ public class IterationValues {
         whichParameterTypeUpdated = ParameterTypes.BETA_ADD.ordinal();
         double newbeta = GeneralMaths.normalDraw(
                 0,
-                propsds.sds[ParameterTypes.BETA_ADD.ordinal()],
+                propsds.proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()],
                 r);
         betas.set(whichBetaAdded,0,newbeta);
     }
@@ -381,7 +381,7 @@ public class IterationValues {
         whichParameterTypeUpdated = ParameterTypes.BETA_SWAP.ordinal();
         double newbeta = GeneralMaths.normalDraw(
                 0,
-                propsds.sds[ParameterTypes.BETA_SWAP.ordinal()],
+                propsds.proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()],
                 r);
         betas.set(whichBetaAdded,0,newbeta);
     }
@@ -400,7 +400,7 @@ public class IterationValues {
         whichParameterTypeUpdated = ParameterTypes.BETWEEN_CLUSTER_SD.ordinal();
         logBetweenClusterSd = GeneralMaths.normalDraw(
                 logBetweenClusterSd,
-                propsds.sds[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()], r);
+                propsds.proposalDistributionSds[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()], r);
     }
     
     /**
@@ -423,7 +423,7 @@ public class IterationValues {
         }
         logBetaPriorSd[sdUpdate] = GeneralMaths.normalDraw(
                 logBetaPriorSd[sdUpdate],
-                propsds.sds[ParameterTypes.BETA_PRIOR_SD.ordinal()], r);
+                propsds.proposalDistributionSds[ParameterTypes.BETA_PRIOR_SD.ordinal()], r);
         betaPriorSds[sdUpdate] = Math.exp(logBetaPriorSd[sdUpdate]);
     }
     
@@ -440,7 +440,7 @@ public class IterationValues {
         whichParameterTypeUpdated = ParameterTypes.WEIBULL_SCALE.ordinal();
         logWeibullScale = GeneralMaths.normalDraw(
                 logWeibullScale,
-                propsds.sds[ParameterTypes.WEIBULL_SCALE.ordinal()], r);
+                propsds.proposalDistributionSds[ParameterTypes.WEIBULL_SCALE.ordinal()], r);
         weibullScale = Math.exp(logWeibullScale);
     }
     
@@ -458,7 +458,7 @@ public class IterationValues {
         for (int i=0; i<numberOfClusters; i++) {
             clusterIntercepts[i] = GeneralMaths.normalDraw(
                     clusterIntercepts[i],
-                    propsds.sds[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()], r);
+                    propsds.proposalDistributionSds[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()], r);
             
         }
     }
@@ -778,7 +778,7 @@ public class IterationValues {
         }
         // Beta contributions conditional on Beta Prior SD which has its own
         // hyper prior
-        for (int c=0; c<data.numberOfModelSpacePartitions; c++) {
+        for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
             for (int v = data.commonBetaPriorPartitionIndices[c]; v < data.commonBetaPriorPartitionIndices[c+1]; v++) {
                 if (model[v]==1) {
                     logPrior = logPrior
@@ -790,29 +790,44 @@ public class IterationValues {
             }
         }
         
-        // Beta prior sds (if they have hyperpiors)
-        if (data.numberOfModelSpacePartitions > 0) {        
+        // Beta prior proposalDistributionSds (if they have hyperpiors)
+        if (data.numberOfUnknownBetaPriors > 0) {        
             // Beta prior SD hyperparameter
             if (arguments.betweenClusterSdPriorFamily == 0) {
                 // uniform prior for SD parameters
-                for (int c=0; c<data.numberOfModelSpacePartitions; c++) {
+                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
                     logPrior = logPrior +
                             Math.log(priors.betweenClusterPrecisionUniformPrior.density(betaPriorSds[c]));
                 }
             } else if (arguments.betweenClusterSdPriorFamily==1) {
-                // My home made gamma contribution (the constant multiplier cancels)
-                for (int c=0; c<data.numberOfModelSpacePartitions; c++) {
-                    logPrior = logPrior
-                            -2*(arguments.betaPrecisionGammaPriorHyperparameter1+1)*logBetaPriorSd[c]
-                            -(double)arguments.betaPrecisionGammaPriorHyperparameter2/(betaPriorSds[c]*betaPriorSds[c]);                    
+                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                    logPrior = logPrior +
+                            Math.log(priors.betaPrecisionUniformPrior.density(betaPriorSds[c]));
+                    // Inverse Gamma
+                    // My home made inverse-gamma log density
+                    // (the constant multiplier is removed since it will cancel
+                    // in the acceptance ratio)
+                    // NOTE: this corresponds to the R gamma parameterisation (see
+                    // Inverse Gamma Distribution John D. Cook)
+//                    logPrior = logPrior
+//                            -2*(arguments.betaPrecisionGammaPriorHyperparameter1+1)*logBetaPriorSd[c]
+//                            -(double)arguments.betaPrecisionGammaPriorHyperparameter2/(betaPriorSds[c]*betaPriorSds[c]);
+                    // Gamma (i.e. not inverse Gamma)
+//                    logPrior = logPrior
+//                            +2*(arguments.betaPrecisionGammaPriorHyperparameter1-1)*logBetaPriorSd[c]
+//                            -(double)(betaPriorSds[c]*betaPriorSds[c])/arguments.betaPrecisionGammaPriorHyperparameter2;                    
                 }
             }
         }
         
         // Weibull shape parameter
         if (data.survivalAnalysis==1) {
+            // Gamma prior
+//            logPrior = logPrior
+//                    +priors.weibullScalePrior.density(weibullScale);
+            // Normal prior on the log
             logPrior = logPrior
-                    +priors.weibullScalePrior.density(weibullScale);
+                    + GeneralMaths.logNormDens(Math.log(weibullScale), 0, 1000);
         }
     }
     
@@ -847,7 +862,7 @@ public class IterationValues {
                 // the corresponding removed log-OR
                 logNumerator = logNumerator +
                         GeneralMaths.logNormDens(curr.betas.get(whichBetaRemoved, 0),
-                        0, propsds.sds[ParameterTypes.BETA_ADD.ordinal()]);
+                        0, propsds.proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()]);
                 logNumerator = logNumerator
                         +Math.log(arguments.moveProbabilities[1]
                         -arguments.moveProbabilities[0])
@@ -862,7 +877,7 @@ public class IterationValues {
                 // the corresponding new log-OR
                 logDenominator = logDenominator +
                         GeneralMaths.logNormDens(betas.get(whichBetaAdded, 0), 0,
-                        propsds.sds[ParameterTypes.BETA_ADD.ordinal()]);
+                        propsds.proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()]);
                 logNumerator = logNumerator
                         +Math.log(arguments.moveProbabilities[0])
                         - Math.log(modelDimension-data.numberOfCovariatesToFixInModel);
@@ -880,10 +895,10 @@ public class IterationValues {
                 // 'curr' and 'prop' have the same number of markers present.
                 logNumerator = logNumerator +
                         GeneralMaths.logNormDens(curr.betas.get(whichBetaRemoved, 0),
-                        0, propsds.sds[ParameterTypes.BETA_SWAP.ordinal()]);
+                        0, propsds.proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()]);
                 logDenominator = logDenominator +
                         GeneralMaths.logNormDens(betas.get(whichBetaAdded, 0),
-                        0, propsds.sds[ParameterTypes.BETA_SWAP.ordinal()]);
+                        0, propsds.proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()]);
             }
 
             // Model Space prior is accounted for, which is not accounted

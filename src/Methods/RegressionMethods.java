@@ -41,7 +41,7 @@ public class RegressionMethods {
             for (int v=0; v<data.totalNumberOfCovariates; v++) {
                 buffer.write(curr.betas.get(v, 0) +" ");
             }
-            for (int c=0; c<data.numberOfModelSpacePartitions; c++) {
+            for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
                 buffer.write(curr.logBetaPriorSd[c] +" ");   // between study var                
             }
             if (data.numberOfClusters > 0) {

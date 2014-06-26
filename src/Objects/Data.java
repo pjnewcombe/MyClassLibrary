@@ -89,10 +89,10 @@ public class Data {
      */
     public int numberOfCovariatesWithInformativePriors;
     /**
-     * Number of likelihoodFamily space components, in which a common prior with unknown
-     * SD will be used over betas.
+     * Number of covariate partitions that will use a common prior with unknown
+     * SD.
      */
-    public int numberOfModelSpacePartitions;
+    public int numberOfUnknownBetaPriors;
     /**
      * Number of covariates in each likelihoodFamily space component using the same
      * common prior with unknown SD.
@@ -218,40 +218,95 @@ public class Data {
             betaPriorMus[v]  = dataScan.nextDouble();
             betaPriorSds[v]  = dataScan.nextDouble();
         }            
-        numberOfModelSpacePartitions = dataScan.nextInt();  // Could be 0
-        commonBetaPriorPartitionIndices = new int[(numberOfModelSpacePartitions+1)];
+        numberOfUnknownBetaPriors = dataScan.nextInt();  // Could be 0
+        commonBetaPriorPartitionIndices = new int[(numberOfUnknownBetaPriors+1)];
         commonBetaPriorPartitionIndices[0] = numberOfCovariatesWithInformativePriors; // could be 0
-        commonBetaPriorPartitionIndices[numberOfModelSpacePartitions] = totalNumberOfCovariates;
-        if (numberOfModelSpacePartitions>1) {     // Only in data if >1 components
-            commonBetaPriorPartitionSizes = new int[(numberOfModelSpacePartitions-1)];
-            for (int i=0; i<(numberOfModelSpacePartitions-1); i++) {
+        commonBetaPriorPartitionIndices[numberOfUnknownBetaPriors] = totalNumberOfCovariates;
+        if (numberOfUnknownBetaPriors>1) {     // Only in data if >1 components
+            commonBetaPriorPartitionSizes = new int[(numberOfUnknownBetaPriors-1)];
+            for (int i=0; i<(numberOfUnknownBetaPriors-1); i++) {
                 commonBetaPriorPartitionSizes[i] = dataScan.nextInt(); //Model Space Poisson Means
                 commonBetaPriorPartitionIndices[i+1]=commonBetaPriorPartitionIndices[i]+commonBetaPriorPartitionSizes[i];
             }
         }
         
         // INITIATION MESSAGE
+        System.out.println("------------");
+        System.out.println("--- DATA ---");
+        System.out.println("------------");
         System.out.println("Data read from "+arguments.pathToDataFile);
-        System.out.println(likelihoodFamily+" model");
+        System.out.println("Likelihood: "+likelihoodFamily);
         if(numberOfClusters>0) {
             System.out.println(numberOfIndividuals+" individuals from "+numberOfClusters+" clusters " +
-                    "- random intercept will be used");
+                    "- random intercepts will be used");
         } else if (numberOfClusters == 0) {
             System.out.println(numberOfIndividuals+" individuals from a single cluster");
         }
-        if (arguments.modelSpacePriorFamily==0) {
-            System.out.println("Poisson prior(s) on model space will be used");
-        } else if (arguments.modelSpacePriorFamily==1) {
-            System.out.println("Beta-binomial prior(s) on model space will be used");            
-        }
-        System.out.println(totalNumberOfCovariates+" variables total, "+arguments.numberOfModelSpacePriorPartitions+" model space " +
-                "components, "+numberOfCovariatesToFixInModel+" excluded from RJ");
-        if (numberOfModelSpacePartitions>0) {
-            System.out.println("Fixed priors for "+numberOfCovariatesWithInformativePriors+" of the beta's have been provided");            
-            System.out.println(numberOfModelSpacePartitions+" common hyperprior(s) for the remaining beta prior SDs will be used");
-        } else {
-            System.out.println("Fixed priors for all the beta's have been provided");            
-        }
+        System.out.println(totalNumberOfCovariates+" covariates");
         
+        System.out.println("");
+        System.out.println("--------------");
+        System.out.println("--- PRIORS ---");
+        System.out.println("--------------");
+        if (arguments.useReversibleJump==0) {
+            // No Model selection
+            System.out.println("Model selection is DISABLED - all covariates"
+                    + " are fixed in the model");
+            System.out.println("Priors have been provided on the effect of"
+                    + " all covariates");
+            
+        } else {
+            // Model selection will be used
+            System.out.println(numberOfCovariatesToFixInModel
+                    +" covariates will be fixed in the model");
+            if (arguments.numberOfModelSpacePriorPartitions>1) {
+                System.out.println("Model selection will be performed for "
+                        +(totalNumberOfCovariates-numberOfCovariatesToFixInModel)
+                        +" covariates, split across "
+                        +arguments.numberOfModelSpacePriorPartitions
+                        +" partitions of differing apriori support");
+                // Model space
+                if (arguments.modelSpacePriorFamily==0) {
+                    System.out.println("Within each partition, Poisson priors"
+                            + " will be used on the number of covariates to"
+                            + " include");
+                } else if (arguments.modelSpacePriorFamily==1) {
+                    System.out.println("Within each partition, Beta-binomial"
+                            + " priors will be used for the number of"
+                            + " covariates to include");            
+                }
+                // Covariates
+                if (numberOfCovariatesWithInformativePriors==numberOfCovariatesToFixInModel) {
+                    System.out.println("Common priors with unknown Uniform[0,2] SDs will be"
+                            + " used across covariate effects within each model"
+                            + " space partition");
+                } else {
+                    System.out.println("Fixed priors on effect sizes have been"
+                            + " provided for all covariates");
+                }
+            } else if (arguments.numberOfModelSpacePriorPartitions==1) {
+                System.out.println("Model selection will be performed for "
+                        +(totalNumberOfCovariates-numberOfCovariatesToFixInModel)
+                        +" covariates");
+                // Model space
+                if (arguments.modelSpacePriorFamily==0) {
+                    System.out.println("A Poisson prior on the number of"
+                            + " covariates to include will be used");
+                } else if (arguments.modelSpacePriorFamily==1) {
+                    System.out.println("A Beta-binomial prior on the number of"
+                            + " covariates to include will be used");            
+                }
+                // Covariate effects
+                if (numberOfCovariatesWithInformativePriors==numberOfCovariatesToFixInModel) {
+                    System.out.println("A common prior with unknown Uniform[0,2] SD will be"
+                            + " used across the effects of covariates under"
+                            + " model selection");
+                } else {
+                    System.out.println("Fixed priors on effect sizes have been"
+                            + " provided for all covariates");
+                }
+            }
+            
+        }
     }
 }
