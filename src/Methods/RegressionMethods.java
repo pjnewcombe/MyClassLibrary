@@ -9,6 +9,7 @@ package Methods;
 import Objects.Arguments;
 import Objects.Data;
 import Objects.IterationValues;
+import Objects.LikelihoodTypes;
 import java.io.BufferedWriter;
 import java.io.IOException;
 
@@ -34,8 +35,11 @@ public class RegressionMethods {
             )
             throws IOException {
             // Write values
-            if (data.survivalAnalysis==1) {
-                buffer.write(curr.logWeibullScale +" ");   // between study var                                
+            if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
+                buffer.write(curr.logWeibullScale +" ");   // Weibull k                                
+            } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
+                    data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+                buffer.write(curr.logGaussianResidual +" ");   // Gaussian residual                
             }
             buffer.write(curr.alpha+" ");
             for (int v=0; v<data.totalNumberOfCovariates; v++) {

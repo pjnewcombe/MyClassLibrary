@@ -13,10 +13,10 @@ public enum ParameterTypes {
     // 3: Between cluster SD
     // 4: Beta prior SD
     // 5: Weibull k
-    // 6: Beta-binomial_theta
+    // 6: Gaussian residual
     // 7: Beta add
     // 8: Beta swap
     ALPHA, BETAS, CLUSTER_INTERCEPTS, BETWEEN_CLUSTER_SD, BETA_PRIOR_SD,
-    WEIBULL_SCALE, BETA_ADD, BETA_SWAP;
+    WEIBULL_SCALE, GAUSSIAN_RESIDUAL, BETA_ADD, BETA_SWAP;
     
 }

@@ -178,6 +178,47 @@ public class GeneralMethods {
           }
           return noPresentMarkers;
       }
-
+      
+    /**
+     * Counts the number of covariates included in a `model' described by
+     * a vector of 0's and 1's, by each different model space component.
+     * 
+     * @param Nblocks Number of blocks in the X matrix.
+     * @param blockIndices Vector of indices for the different blocks
+     * @param whichMove Move type - to determine if swap and therefore 2 blocks
+     * may have changed.
+     * @param whichBetaRemoved Beta removed
+     * @param whichBetaAdded Beta added
+     * @param whichBetaUpdated Beta added
+     * 
+     * @return A vector indicating which blocks have been updated
+     */     
+      public static boolean[] determineUpdatedBlocks(
+              int Nblocks,
+              int[] blockIndices,
+              int whichMove,
+              int whichBetaRemoved,
+              int whichBetaAdded,
+              int whichBetaUpdated) {
+          boolean[] whichBlocksUpdated = new boolean[Nblocks];
+          for (int b=0; b<Nblocks; b++) {
+              if (whichMove==0|whichMove==2) {
+                  if ((whichBetaRemoved>=blockIndices[b])&(whichBetaRemoved<blockIndices[(b+1)])) {
+                      whichBlocksUpdated[b] = true;
+                  }
+              }
+              if (whichMove==1|whichMove==2) {
+                  if ((whichBetaAdded>=blockIndices[b])&(whichBetaAdded<blockIndices[(b+1)])) {
+                      whichBlocksUpdated[b] = true;
+                  }
+              }
+              if (whichMove==3) {
+                  if ((whichBetaUpdated>=blockIndices[b])&(whichBetaUpdated<blockIndices[(b+1)])) {
+                      whichBlocksUpdated[b] = true;
+                  }                  
+              }              
+          }
+          return whichBlocksUpdated;
+      }
     
 }

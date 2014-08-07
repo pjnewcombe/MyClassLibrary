@@ -105,6 +105,10 @@ public class Arguments {
      */
     public double initialWeibullScale; // init Weibull scale value
     /**
+     * Initial value for the Weibull scale parameter {@link Objects.IterationValues#weibullScale}.
+     */
+    public double initialGaussianResidual; // init Weibull scale value
+    /**
      * Whether to use alternative initial values (0/1).
      */
     public int useAlternativeInitialValues; // whether to use alternative initial values
@@ -112,6 +116,10 @@ public class Arguments {
      * Whether to use model selection (0/1).
      */
     public int useReversibleJump; // indicates whether to use Model Prior
+    /**
+     * Whether to use a g-prior (0/1).
+     */
+    public int useGPrior; // indicates whether to use Model Prior
     // Prior Params
     /**
      * Normal prior mean for the intercept parameter
@@ -218,6 +226,11 @@ public class Arguments {
      */
     public double proposalDistributionSdForLogWeibullScale;
     /**
+     * SD of the proposal distribution for the Gaussian residual parameter
+     * {@link Objects.IterationValues#logGaussianResidual}.
+     */
+    public double proposalDistributionSdForLogGaussianResidual;
+    /**
      * Every nth iteration to modify the proposal SDs, during adaption.
      */
     public int adaptionBinSize;
@@ -248,19 +261,21 @@ public class Arguments {
         consoleOutputInterval = Integer.parseInt(args[6]); // how often to output progress to terminal
         whichSeed = Integer.parseInt(args[7]); // no burn in itns
         useReversibleJump = Integer.parseInt(args[8]); // whether to use model selection
-        useAlternativeInitialValues = Integer.parseInt(args[9]); // whether to use model selection
-        numberOfModelSpacePriorPartitions = Integer.parseInt(args[10]); //Number of model space components
-        modelSpacePriorFamily = Integer.parseInt(args[11]); //Number of model space components
+        useGPrior= Integer.parseInt(args[9]); // whether to use model selection
+        useAlternativeInitialValues = Integer.parseInt(args[10]); // whether to use model selection
+        numberOfModelSpacePriorPartitions = Integer.parseInt(args[11]); //Number of model space components
+        modelSpacePriorFamily = Integer.parseInt(args[12]); //Indicator of model space prior family
+        // up to here
         if (modelSpacePriorFamily==0) {
             // Poisson
             modelSpacePoissonPriorRate = new double[numberOfModelSpacePriorPartitions];
             for (int i=0; i<numberOfModelSpacePriorPartitions; i++) {
-                modelSpacePoissonPriorRate[i] = Double.parseDouble(args[12+i]); //Model Space Poisson Means
+                modelSpacePoissonPriorRate[i] = Double.parseDouble(args[13+i]); //Model Space Poisson Means
             }
             if (numberOfModelSpacePriorPartitions > 1) {
                 modelSpacePriorPartitionSizes = new int[numberOfModelSpacePriorPartitions-1];
                 for (int i=0; i<(numberOfModelSpacePriorPartitions-1); i++) {
-                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[12+numberOfModelSpacePriorPartitions+i]); //Model Space Poisson Means
+                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[13+numberOfModelSpacePriorPartitions+i]); //Model Space Poisson Means
                 }
             }
         } else if (modelSpacePriorFamily==1) {
@@ -268,13 +283,13 @@ public class Arguments {
             modelSpaceBetaBinomialPriorHyperparameterA = new double[numberOfModelSpacePriorPartitions];
             modelSpaceBetaBinomialPriorHyperparameterB = new double[numberOfModelSpacePriorPartitions];
             for (int i=0; i<numberOfModelSpacePriorPartitions; i++) {
-                modelSpaceBetaBinomialPriorHyperparameterA[i] = Double.parseDouble(args[12+(i*2)]); //Model Space Poisson Means
-                modelSpaceBetaBinomialPriorHyperparameterB[i] = Double.parseDouble(args[12+(i*2)+1]); //Model Space Poisson Means
+                modelSpaceBetaBinomialPriorHyperparameterA[i] = Double.parseDouble(args[13+(i*2)]); //Model Space Poisson Means
+                modelSpaceBetaBinomialPriorHyperparameterB[i] = Double.parseDouble(args[13+(i*2)+1]); //Model Space Poisson Means
             }
             if (numberOfModelSpacePriorPartitions > 1) {
                 modelSpacePriorPartitionSizes = new int[numberOfModelSpacePriorPartitions-1];
                 for (int i=0; i<(numberOfModelSpacePriorPartitions-1); i++) {
-                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[12+(2*numberOfModelSpacePriorPartitions)+i]); //Model Space Poisson Means
+                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[13+(2*numberOfModelSpacePriorPartitions)+i]); //Model Space Poisson Means
                 }
             }
         }
@@ -340,6 +355,7 @@ public class Arguments {
         
         argumentNameInFile = argScan.next();        
         initialWeibullScale = argScan.nextDouble();
+        initialGaussianResidual = 1; // TO UPDATE !!!
         
         // Modelling Arguments
         
@@ -373,6 +389,9 @@ public class Arguments {
         
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForLogWeibullScale = argScan.nextDouble();
+
+//        argumentNameInFile = argScan.next();        
+        proposalDistributionSdForLogGaussianResidual = 0.1;
         
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForAddingBeta = argScan.nextDouble();

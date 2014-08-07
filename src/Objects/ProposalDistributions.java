@@ -8,9 +8,9 @@ package Objects;
  */
 public class ProposalDistributions {
     // static means each instaniation will have fixed param values
-    private int adaptionInterval;
-    private int adaptionLength;
-    private int[] adapting;
+    private final int adaptionInterval;
+    private final int adaptionLength;
+    private final int[] adapting;
     /**
      * Total number of proposal distributions
      */
@@ -35,7 +35,7 @@ public class ProposalDistributions {
     // Contructor method has name as class
     // NewLikeData data1 = new NewLikeData(m, sg, sa)
     public ProposalDistributions(Arguments arguments, Data data) {
-        numberOfProposalDistributions = 8;
+        numberOfProposalDistributions = 9; // Must be of length equal to ParameterTypes - does not matter if some elements are redundant
         acceptanceRateNumerators = new int[numberOfProposalDistributions];
         acceptanceRateDenominators = new int[numberOfProposalDistributions];
         acceptanceRates = new double[numberOfProposalDistributions];
@@ -55,9 +55,21 @@ public class ProposalDistributions {
             proposalDistributionSds[ParameterTypes.BETA_PRIOR_SD.ordinal()] = arguments.proposalDistributionSdForBetaPriorSd;
             adapting[ParameterTypes.BETA_PRIOR_SD.ordinal()] = 1;            
         }
-        if (data.survivalAnalysis==1) {
+        if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
             proposalDistributionSds[ParameterTypes.WEIBULL_SCALE.ordinal()] = arguments.proposalDistributionSdForLogWeibullScale;
             adapting[ParameterTypes.WEIBULL_SCALE.ordinal()] = 1;
+        }
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()) {
+            proposalDistributionSds[ParameterTypes.GAUSSIAN_RESIDUAL.ordinal()] = arguments.proposalDistributionSdForLogGaussianResidual;
+            adapting[ParameterTypes.GAUSSIAN_RESIDUAL.ordinal()] = 1;
+            // Also set something bigger for alpha
+            proposalDistributionSds[ParameterTypes.ALPHA.ordinal()] = 1;
+        }
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+            proposalDistributionSds[ParameterTypes.GAUSSIAN_RESIDUAL.ordinal()] = arguments.proposalDistributionSdForLogGaussianResidual;
+            adapting[ParameterTypes.GAUSSIAN_RESIDUAL.ordinal()] = 1;
+            // No intercept (fixed at 0) for marginal meta-analysis methods
+            adapting[ParameterTypes.ALPHA.ordinal()] = 0;
         }
         proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()] = arguments.proposalDistributionSdForAddingBeta;
         proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()] = arguments.proposalDistributionSdForSwappedInBeta;
