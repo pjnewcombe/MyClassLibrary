@@ -1208,20 +1208,24 @@ public class IterationValues {
         /***
          * Covariate prior precision(s)
          ***/        
-        if (data.numberOfUnknownBetaPriors > 0) {        
-            // Beta prior SD hyperparameter
-            if (arguments.betweenClusterSdPriorFamily == 0) {
-                // uniform prior for SD parameters
-                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-                    logPrior = logPrior +
-                            Math.log(priors.betweenClusterPrecisionUniformPrior.density(betaPriorSds[c]));
-                }
-            } else if (arguments.betweenClusterSdPriorFamily==1) {
-                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-                    logPrior = logPrior +
-                            Math.log(priors.betaPrecisionUniformPrior.density(betaPriorSds[c]));
-                }
+        if (data.numberOfUnknownBetaPriors > 0) {
+            // Jeffrey's priors: P(sigma^2)=1/(sigma^2)
+            for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                logPrior = logPrior - (double) (2*Math.log(betaPriorSds[c]));
             }
+//            // Beta prior SD hyperparameter
+//            if (arguments.betweenClusterSdPriorFamily == 0) {
+//                // uniform prior for SD parameters
+//                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+//                    logPrior = logPrior +
+//                            Math.log(priors.betweenClusterPrecisionUniformPrior.density(betaPriorSds[c]));
+//                }
+//            } else if (arguments.betweenClusterSdPriorFamily==1) {
+//                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+//                    logPrior = logPrior +
+//                            Math.log(priors.betaPrecisionUniformPrior.density(betaPriorSds[c]));
+//                }
+//            }
         }
         
         /***
