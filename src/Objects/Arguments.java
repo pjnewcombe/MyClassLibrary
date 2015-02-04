@@ -41,6 +41,10 @@ public class Arguments {
     /**
      * Number of model space prior components.
      */
+    public int maximumModelDimension;
+    /**
+     * Number of model space prior components.
+     */
     public int numberOfModelSpacePriorPartitions;
     /**
      * Prior family distribution to use over the model space (0=Poisson,
@@ -71,7 +75,7 @@ public class Arguments {
     /**
      * Every nth iteration to write to the results file.
      */
-    public int consoleOutputInterval;  // Number of Sds total
+    public int consoleOutputInterval;
     /**
      * Whether to store random intercepts in results file.
      */
@@ -79,17 +83,13 @@ public class Arguments {
     
     // Initial Values
     /**
-     * Use saturated initial model (0/1).
-     */
-    public int useSaturatedInitialModel; // whether to use saturated initial model
-    /**
      * Initial intercept value.
      */
-    public double initialAlpha; // init intercept value
+    public double initialAlpha;
     /**
      * Initial values for the betas {@link Objects.IterationValues#betas}.
      */
-    public double initialBetas; // init logOR values
+    public double initialBetas;
     /**
      * Initial values for the unknown prior SDs common to all betas in a
      * model space component {@link Objects.IterationValues#logBetaPriorSd}.
@@ -142,6 +142,20 @@ public class Arguments {
      */
     public double betaPriorSd; // log-OR prior sd
     /**
+     * Which prior family to use for the beta precision (0=uniform, 1=gamma).
+     */
+    public int betaPrecisionPriorFamily; // whether to use uniform or gamma sd prior
+    /**
+     * Hyperparameter 1 of the Gamma prior on the unknown precision used for
+     * the beta's priors.
+     */
+    public double betaSigmaUniformPriorHyperparameter1;
+    /**
+     * Hyperparameter 2 of the Gamma prior on the unknown precision used for
+     * the beta's priors.
+     */
+    public double betaSigmaUniformPriorHyperparameter2;
+    /**
      * Hyperparameter 1 of the Gamma prior on the unknown precision used for
      * the beta's priors.
      */
@@ -171,6 +185,26 @@ public class Arguments {
      * Gamma prior hyper-parameter 2 for the between cluster SD.
      */
     public double betweenClusterPrecisionGammaPriorHyperparameter2;
+    /**
+     * Which prior family to use for the Gaussian residuals (0=Jeffreys, 1=Inverse Gamma).
+     */
+    public int gaussianResidualPriorFamily; // whether to use uniform or gamma sd prior
+    /**
+     * Gamma prior hyper-parameter 1 for the between cluster SD.
+     */
+    public double gaussianResidualUniformPriorHyperparameter1;
+    /**
+     * Gamma prior hyper-parameter 2 for the between cluster SD.
+     */
+    public double gaussianResidualUniformPriorHyperparameter2;
+    /**
+     * Gamma prior hyper-parameter 1 for the between cluster SD.
+     */
+    public double gaussianResidualPrecisionGammaPriorHyperparameter1;
+    /**
+     * Gamma prior hyper-parameter 2 for the between cluster SD.
+     */
+    public double gaussianResidualPrecisionGammaPriorHyperparameter2;
     /**
      * Hyper-parameter 1 for a Gamma prior on the Weibull scale parameter.
      */
@@ -263,19 +297,20 @@ public class Arguments {
         useReversibleJump = Integer.parseInt(args[8]); // whether to use model selection
         useGPrior= Integer.parseInt(args[9]); // whether to use model selection
         useAlternativeInitialValues = Integer.parseInt(args[10]); // whether to use model selection
-        numberOfModelSpacePriorPartitions = Integer.parseInt(args[11]); //Number of model space components
-        modelSpacePriorFamily = Integer.parseInt(args[12]); //Indicator of model space prior family
+        maximumModelDimension = Integer.parseInt(args[11]); // Limit maximum dimension of model
+        numberOfModelSpacePriorPartitions = Integer.parseInt(args[12]); //Number of model space components
+        modelSpacePriorFamily = Integer.parseInt(args[13]); //Indicator of model space prior family
         // up to here
         if (modelSpacePriorFamily==0) {
             // Poisson
             modelSpacePoissonPriorRate = new double[numberOfModelSpacePriorPartitions];
             for (int i=0; i<numberOfModelSpacePriorPartitions; i++) {
-                modelSpacePoissonPriorRate[i] = Double.parseDouble(args[13+i]); //Model Space Poisson Means
+                modelSpacePoissonPriorRate[i] = Double.parseDouble(args[14+i]); //Model Space Poisson Means
             }
             if (numberOfModelSpacePriorPartitions > 1) {
                 modelSpacePriorPartitionSizes = new int[numberOfModelSpacePriorPartitions-1];
                 for (int i=0; i<(numberOfModelSpacePriorPartitions-1); i++) {
-                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[13+numberOfModelSpacePriorPartitions+i]); //Model Space Poisson Means
+                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[14+numberOfModelSpacePriorPartitions+i]); //Model Space Poisson Means
                 }
             }
         } else if (modelSpacePriorFamily==1) {
@@ -283,13 +318,13 @@ public class Arguments {
             modelSpaceBetaBinomialPriorHyperparameterA = new double[numberOfModelSpacePriorPartitions];
             modelSpaceBetaBinomialPriorHyperparameterB = new double[numberOfModelSpacePriorPartitions];
             for (int i=0; i<numberOfModelSpacePriorPartitions; i++) {
-                modelSpaceBetaBinomialPriorHyperparameterA[i] = Double.parseDouble(args[13+(i*2)]); //Model Space Poisson Means
-                modelSpaceBetaBinomialPriorHyperparameterB[i] = Double.parseDouble(args[13+(i*2)+1]); //Model Space Poisson Means
+                modelSpaceBetaBinomialPriorHyperparameterA[i] = Double.parseDouble(args[14+(i*2)]); //Model Space Poisson Means
+                modelSpaceBetaBinomialPriorHyperparameterB[i] = Double.parseDouble(args[14+(i*2)+1]); //Model Space Poisson Means
             }
             if (numberOfModelSpacePriorPartitions > 1) {
                 modelSpacePriorPartitionSizes = new int[numberOfModelSpacePriorPartitions-1];
                 for (int i=0; i<(numberOfModelSpacePriorPartitions-1); i++) {
-                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[13+(2*numberOfModelSpacePriorPartitions)+i]); //Model Space Poisson Means
+                    modelSpacePriorPartitionSizes[i] = Integer.parseInt(args[14+(2*numberOfModelSpacePriorPartitions)+i]); //Model Space Poisson Means
                 }
             }
         }
@@ -307,11 +342,20 @@ public class Arguments {
         alphaPriorSd = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
+        betaPrecisionPriorFamily = argScan.nextInt(); // Precision prior; 0: Unif 1: Gamma
+        
+        argumentNameInFile = argScan.next();        
+        betaSigmaUniformPriorHyperparameter1 = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        betaSigmaUniformPriorHyperparameter2 = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
         betaPrecisionGammaPriorHyperparameter1 = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         betaPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
-        
+
         argumentNameInFile = argScan.next();        
         betweenClusterSdPriorFamily = argScan.nextInt(); // Precision prior; 0: Unif 1: Gamma
         
@@ -326,21 +370,29 @@ public class Arguments {
         
         argumentNameInFile = argScan.next();        
         betweenClusterPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
-        
+
         argumentNameInFile = argScan.next();        
         weibullScaleGammaPriorHyperparameter1 = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         weibullScaleGammaPriorHyperparameter2 = argScan.nextDouble();
 
-        // Initial Values        
         argumentNameInFile = argScan.next();        
-        useSaturatedInitialModel = argScan.nextInt(); // whether to use staurated initial model
-        // If model selection is disabled force saturated initial model
-        if (useReversibleJump==0) {
-            useSaturatedInitialModel = 1;
-        }
+        gaussianResidualPriorFamily = argScan.nextInt(); // Precision prior; 0: Unif 1: Gamma
         
+        argumentNameInFile = argScan.next();        
+        gaussianResidualUniformPriorHyperparameter1 = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        gaussianResidualUniformPriorHyperparameter2 = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        gaussianResidualPrecisionGammaPriorHyperparameter1 = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        gaussianResidualPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
+        
+        // Initial Values        
         argumentNameInFile = argScan.next();        
         initialAlpha = argScan.nextDouble(); // init logOR values
         
@@ -355,7 +407,9 @@ public class Arguments {
         
         argumentNameInFile = argScan.next();        
         initialWeibullScale = argScan.nextDouble();
-        initialGaussianResidual = 1; // TO UPDATE !!!
+        
+        argumentNameInFile = argScan.next();        
+        initialGaussianResidual = argScan.nextDouble();
         
         // Modelling Arguments
         
@@ -390,8 +444,8 @@ public class Arguments {
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForLogWeibullScale = argScan.nextDouble();
 
-//        argumentNameInFile = argScan.next();        
-        proposalDistributionSdForLogGaussianResidual = 0.1;
+        argumentNameInFile = argScan.next();        
+        proposalDistributionSdForLogGaussianResidual = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForAddingBeta = argScan.nextDouble();
@@ -401,13 +455,7 @@ public class Arguments {
         
         // Alternative initial values
         if (useAlternativeInitialValues==1) {
-            // Initial Values        
-            argumentNameInFile = argScan.next();        
-            useSaturatedInitialModel = argScan.nextInt(); // whether to use staurated initial model
-            // If model selection is disabled force saturated initial model
-            if (useReversibleJump==0) {
-                useSaturatedInitialModel = 1;
-            }
+            // Initial Values
             argumentNameInFile = argScan.next();        
             initialAlpha = argScan.nextDouble(); // init logOR values
             argumentNameInFile = argScan.next();        

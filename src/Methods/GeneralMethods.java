@@ -20,7 +20,8 @@ public class GeneralMethods {
      * @return Indicates chosen move type (0=Removal, 1=Addition, 2=Swap, 3=Null)
      */
     public static int chooseMove(
-            int M, 
+            int M,
+            int maxAllowedMarkers,
             int presentMarkN,
             double[] moveProbabilities,
             Random randomDraws) {
@@ -35,8 +36,12 @@ public class GeneralMethods {
             // can not have add or swap
             if (whichMove==2) {whichMove = 3;}
             if (whichMove==1) {whichMove = 3;}
-        }
-        if (presentMarkN==0) { 
+        } else if (presentMarkN==maxAllowedMarkers) { 
+            // can not have add
+            // If not limiting model space, maxAllowedMarkers will be set
+            // greater than M
+            if (whichMove==1) {whichMove = 3;}
+        } else if (presentMarkN==0) { 
             // can not have rem or swap
             if (whichMove==2) {whichMove = 3;}
             if (whichMove==0) {whichMove = 3;}            

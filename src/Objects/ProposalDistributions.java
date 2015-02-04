@@ -80,7 +80,8 @@ public class ProposalDistributions {
     public void adapt(Data data, IterationValues Its, int i) {
         if (i<adaptionLength) {
             for (int j=0; j<numberOfProposalDistributions; j++) {
-                if (adapting[j]==1) {
+//                if (adapting[j]==1&ParameterTypes.BETAS.ordinal()!=j) { ///////////////////////////
+                if (adapting[j]==1) { ///////////////////////////
                     // NOTE: Order of following steps must remain for same results
                     // Reset numerator and denominator at end of bin
                     if (acceptanceRateDenominators[j]==adaptionInterval) {

@@ -58,6 +58,14 @@ public class Data {
      * Vector of survival times for each individual (if it is survival data).
      */
     public double[] times;         // Event/death times vector (survival model)    
+    /**
+     * Initial model (if option 2 for initialModelOption)
+     */
+    public int initialModelOption;
+    /**
+     * Initial model (if option 2 for initialModelOption)
+     */
+    public int[] initialModel;
     
     /**
      * 
@@ -154,6 +162,16 @@ public class Data {
      * 
      */
     
+    /**
+     * Prior estimate of the Guassian residual (necessary for the Gaussian
+     * marginal model).
+     */
+    public double gaussianResidualVarianceEstimate;         
+    /**
+     * Sample size of the prior estimate of the Guassian residual (necessary for
+     * the Gaussian marginal model).
+     */
+    public int gaussianResidualVarianceEstimateN;         
     /**
      * Number of blocks (for Gaussian marginal).
      */
@@ -263,6 +281,11 @@ public class Data {
          */
         if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
             /**
+             * Information required for the residual variance prior
+             */
+            gaussianResidualVarianceEstimate = dataScan.nextDouble();
+            gaussianResidualVarianceEstimateN = dataScan.nextInt();
+            /**
              * Read in block indices
              */
             nBlocks = dataScan.nextInt();
@@ -274,8 +297,10 @@ public class Data {
             for (int b=0; b<nBlocks; b++) {
                 blockIndices[(b+1)] = (dataScan.nextInt()-1);
                 blockSizes[b] = blockIndices[(b+1)] - blockIndices[b];
+                // Cumulative block sizes are one block down total
+                // for indice adjustments
                 if (b>0) {
-                    cumulativeBlockSizes[b] = blockSizes[b]
+                    cumulativeBlockSizes[b] = blockSizes[b-1]
                             +cumulativeBlockSizes[b-1];                    
                 }
             }
@@ -333,12 +358,16 @@ public class Data {
             for (int i=0; i<numberOfIndividuals; i++) {
                 outcomes[i]  = dataScan.nextInt();
             }
-        } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+        } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()) {
             continuousOutcomesJama = new Matrix(numberOfIndividuals,1);
             for (int i=0; i<numberOfIndividuals; i++) {
                 continuousOutcomesJama.set(i, 0, dataScan.nextDouble());
-            }        
+            }
+        } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+            continuousOutcomesJama = new Matrix(totalNumberOfCovariates,1);
+            for (int i=0; i<totalNumberOfCovariates; i++) {
+                continuousOutcomesJama.set(i, 0, dataScan.nextDouble());
+            }
         }
         
         /**
@@ -376,6 +405,19 @@ public class Data {
             }
         }
         
+        /**
+         * If specifying an initial model read it in
+         */
+        initialModelOption = dataScan.nextInt();
+        if (arguments.useReversibleJump==0) {
+            initialModelOption = 1;
+        }
+        if (initialModelOption==2) {
+            initialModel = new int[totalNumberOfCovariates];
+            for (int v=0; v<totalNumberOfCovariates; v++) {
+                initialModel[v] = dataScan.nextInt();
+            }
+        }
         /**
          * If a G-prior is being used, set up the inverted matrix
          */

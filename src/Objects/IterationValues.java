@@ -4,6 +4,7 @@ import Methods.GeneralMaths;
 import Jama.Matrix;
 import Methods.GeneralMethods;
 import java.util.Random;
+import umontreal.iro.lecuyer.probdist.GammaDist;
 
 /**
  * This class contains a model and parameter values, in addition to it's
@@ -237,10 +238,12 @@ public class IterationValues {
             alpha = arguments.initialAlpha;
         }
         for (int v=0; v<data.totalNumberOfCovariates; v++) {
-            if ((arguments.useSaturatedInitialModel == 1)|(v < data.numberOfCovariatesToFixInModel)) {
+            if ((data.initialModelOption == 1)|(v < data.numberOfCovariatesToFixInModel)) {
                 model[v] = 1;
-            } else {
+            } else if (data.initialModelOption == 0) {
                 model[v] = 0;
+            } else if (data.initialModelOption == 2) {
+                model[v] = data.initialModel[v];                
             }
             betas.set(v, 0, arguments.initialBetas);
         }
@@ -256,7 +259,14 @@ public class IterationValues {
         }
         weibullScale = arguments.initialWeibullScale;
         logWeibullScale = Math.log(weibullScale);
-        gaussianResidual = arguments.initialGaussianResidual;
+        if (data.whichLikelihoodType
+                ==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+            gaussianResidual = Math.sqrt(
+                    data.gaussianResidualVarianceEstimate
+            );
+        } else {
+            gaussianResidual = arguments.initialGaussianResidual;            
+        }
         logGaussianResidual = Math.log(gaussianResidual);
         
         
@@ -811,6 +821,7 @@ public class IterationValues {
             // Count number variables included in current model to determine
             // whichMove
         whichMove = GeneralMethods.chooseMove( (totalNumberOfCovariates-numberOfCovariatesToFixInModel),
+                    arguments.maximumModelDimension,
                     (modelDimension-numberOfCovariatesToFixInModel),
                     arguments.moveProbabilities,randomDraws);
         if (arguments.useReversibleJump == 0) {whichMove = 3;}
@@ -990,7 +1001,17 @@ public class IterationValues {
             }
             logLikelihood = logLikelihood
                     - (double) (likelihoodScoreTerm/(2*gaussianResidual*gaussianResidual))
-                    - data.numberOfIndividuals*logGaussianResidual;            
+                    - (double) (data.totalNumberOfCovariates*logGaussianResidual);  
+            /***
+             * Contribution of observed variance to the residual 
+             */
+            logLikelihood = logLikelihood + Math.log(
+                GammaDist.density(
+                    (data.gaussianResidualVarianceEstimateN/2),
+                    (data.gaussianResidualVarianceEstimateN/
+                            (2*gaussianResidual*gaussianResidual)),
+                    data.gaussianResidualVarianceEstimate)
+            );
         }
     }
 
@@ -1100,13 +1121,23 @@ public class IterationValues {
                     }
                 }                
             }
+            /***
+             * Contribution of observed variance to the residual 
+             */
+            logLikelihood = logLikelihood + Math.log(
+                GammaDist.density(
+                    (data.gaussianResidualVarianceEstimateN/2),
+                    (data.gaussianResidualVarianceEstimateN/
+                            (2*gaussianResidual*gaussianResidual)),
+                    data.gaussianResidualVarianceEstimate)
+            );
             /**
              * Calculate the log-likelihood, using the score term from above
              * Note that this covers the case for a gaussianResidual update
              **/
             logLikelihood = logLikelihood
                     - (double) (likelihoodScoreTerm/(2*gaussianResidual*gaussianResidual))
-                    - data.numberOfIndividuals*logGaussianResidual;            
+                    - (double) (data.totalNumberOfCovariates*logGaussianResidual);            
         }
     }
 
@@ -1209,23 +1240,25 @@ public class IterationValues {
          * Covariate prior precision(s)
          ***/        
         if (data.numberOfUnknownBetaPriors > 0) {
-            // Jeffrey's priors: P(sigma^2)=1/(sigma^2)
-            for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-                logPrior = logPrior - (double) (2*Math.log(betaPriorSds[c]));
+            if (arguments.betaPrecisionPriorFamily==0) {
+                // Jeffrey's priors: P(sigma^2)=1/(sigma^2)
+                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                    logPrior = logPrior - (double) (2*Math.log(betaPriorSds[c]));
+                }
+            } else if (arguments.betaPrecisionPriorFamily==1) {
+                // Uniform prior
+                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                    logPrior = logPrior +
+                            Math.log(priors.betaSigmaUniformPrior.density(betaPriorSds[c]));
+                }                
+            } else if (arguments.betaPrecisionPriorFamily==2) {
+                // Inverse-gamma prior on the residual variance
+                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                    logPrior = logPrior +
+                            Math.log(priors.betaPrecisionGammaPrior.density(
+                                    (double) (1/(betaPriorSds[c]*betaPriorSds[c])) ));
+                }
             }
-//            // Beta prior SD hyperparameter
-//            if (arguments.betweenClusterSdPriorFamily == 0) {
-//                // uniform prior for SD parameters
-//                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-//                    logPrior = logPrior +
-//                            Math.log(priors.betweenClusterPrecisionUniformPrior.density(betaPriorSds[c]));
-//                }
-//            } else if (arguments.betweenClusterSdPriorFamily==1) {
-//                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-//                    logPrior = logPrior +
-//                            Math.log(priors.betaPrecisionUniformPrior.density(betaPriorSds[c]));
-//                }
-//            }
         }
         
         /***
@@ -1242,12 +1275,33 @@ public class IterationValues {
          ***/
         if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
                 data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-//            logPrior = logPrior
-//                    + Math.log(priors.gaussianResidualPrecisionPrior.density(
-//                            (double) (1/(gaussianResidual*gaussianResidual)) ));
-            // Jeffrey's prior: P(sigma^2)=1/(sigma^2)
-            logPrior = logPrior - (double) (2*Math.log(gaussianResidual) );
+//        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()) {
+            if (arguments.gaussianResidualPriorFamily==0) {
+                // Jeffrey's prior: P(sigma^2)=1/(sigma^2)
+                logPrior = logPrior - (double) (2*Math.log(gaussianResidual) );
+            } else if (arguments.gaussianResidualPriorFamily==1) {
+                // Uniform prior
+                logPrior = logPrior +
+                        Math.log(priors.gaussianResidualUniformPrior.density(gaussianResidual));
+            } else if (arguments.gaussianResidualPriorFamily==2) {
+                // Gamma on the Gaussian precision, i.e. inverse gamma on the
+                // Gaussian variance.
+                logPrior = logPrior
+                        + Math.log(priors.gaussianResidualPrecisionPrior.density(
+                                (double) (1/(gaussianResidual*gaussianResidual)) ));   
+            }
         }
+//        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+//            // Scaled inverse Chi squared
+//            logPrior = logPrior
+//                    + Math.log(priors
+//                            .scaledChiSquareGaussianResidualPrecisionPrior
+//                            .density(
+//                                (double) (gaussianResidual*gaussianResidual)
+//                            )
+//                    );
+//            
+//        }
     }
     
     /**
