@@ -3,6 +3,7 @@ package Objects;
 import Methods.GeneralMaths;
 import Jama.Matrix;
 import Methods.GeneralMethods;
+import java.util.Arrays;
 import java.util.Random;
 import umontreal.iro.lecuyer.probdist.GammaDist;
 
@@ -28,10 +29,6 @@ public class IterationValues {
      * The total number of covariates fixed in the model.
      */
     private final int numberOfCovariatesToFixInModel;
-    /**
-     * The total number of clusters (in the case of random intercepts).
-     */
-    private final int numberOfClusters;
     
     /**
      * 
@@ -42,98 +39,62 @@ public class IterationValues {
      */
     
     /**
-     * Model intercept.
+     * General: Model intercept.
      */
     public double alpha;
     /**
-     * Model covariate parameters (eg log-ORs for logistic regression).
+     * General: Model covariate parameters (eg log-ORs for logistic regression).
      */
     public Matrix betas;
     /**
-     * Vector of clusters specific random intercepts.
-     */
-    public double[] clusterIntercepts;
-    /**
-     * Between clusters standard deviation (logged).
-     */
-    public double logBetweenClusterSd;
-    /**
-     * Weibull scale parameter.
+     * Weibull model: Weibull scale parameter.
      */
     public double weibullScale;
     /**
-     * Log-Weibull scale parameter.
+     * Weibull model: Log-Weibull scale parameter.
      */
     public double logWeibullScale;
     /**
-     * Gaussian residual parameter.
+     * Guassian model: Residual parameter.
      */
     public double gaussianResidual;
     /**
-     * Log-Gaussian residual parameter.
+     * Guassian model: Log-residual parameter.
      */
     public double logGaussianResidual;
     /**
-     * Vector indicating which covariates are included in the model
-     * (length = total number of covariates being searched over).
+     * General: Model. Vector indicating which covariates are included in the
+     * model (length = total number of covariates being searched over).
      */
     public int[] model;
     /**
-     * Total number of covariates included in the model.
+     * General: Model dimension. The total number of covariates included in the
+     * model.
      */
     public int modelDimension;
     /**
-     * Total number of covariates included in each component of the model space
-     * (length = number of model space components).
+     * General: Model dimension by partition. Total number of covariates included
+     * in each component of the model space (length = number of model space
+     * components).
      */
     public int[] modelSpacePartitionDimensions;
     /**
-     * Unknown common prior SD across the betas (length = number of model space
-     * components).
+     * General: Prior SD for the betas. Assumed common across all betas in
+     * a model space partition (length = number of model space components).
      */
     public double[] betaPriorSds;
     /**
-     * Log-unknown common prior SD across the betas (length = number of model space
-     * components).
+     * General: log of the prior SD for the betas. Log-unknown common prior SD
+     * across the betas (length = number of model space components).
      */
-    public double[] logBetaPriorSd;    
-    
+    public double[] logBetaPriorSds;    
     
     /**
      * 
-     * 
-     * Below are quantities which are calculated as part of the likelihood
-     * calculations.
+     * Prior, likelihood and acceptance ratio.
      * 
      */
     
-    /**
-     * Product of the covariate matrix and coefficient vector.
-     */
-    public Matrix Xbeta;        
-    /**
-     * Product of the covariate matrix and coefficient vector, by block (for
-     * GuassianMarg).
-     */
-    public Matrix[] XbetaBlocks;        
-    /**
-     * Contains the random intercepts.
-     */
-    public Matrix alphaJama;
-    /**
-     * GaussianMarg: Likelihood score term - saved so that minor changes can be
-     * made
-     **/
-    public double likelihoodScoreTerm;
-    /**
-     * GaussianMarg: Block -specific likelihood score term - saved so that minor
-     * changes can be made
-     **/
-    public double[] likelihoodScoreTermsBlocks;
-    /**
-     * Y - X*Beta.
-     */ 
-    private Matrix yMinXbeta;
     /**
      * Prior support (logged).
      */
@@ -143,10 +104,52 @@ public class IterationValues {
      */
     public double logLikelihood;
     /**
+     * Ratio of priors for current vis proposed models.
+     */
+    public double logModelPriorRatio;
+    /**
      * Acceptance probability for this model and parameter values in comparison
      * to the current state.
      */
     public double acceptanceProbability;
+    
+    /**
+     * 
+     * Partial likelihood calculations. Below are quantities which are
+     * calculated and stored during the likelihood calculations.
+     * 
+     */
+    
+    /**
+     * Product of the covariate matrix and coefficient vector.
+     */
+    public Matrix Xbeta;        
+    /**
+     * Product of the covariate matrix and coefficient vector. Stored by block
+     * for GuassianMarg.
+     */
+    public Matrix[] XbetaBlocks;        
+    /**
+     * Block specific likelihood terms to be stored. For GaussianMarg these are
+     * the block-specific likelihood score terms.
+     **/
+    public double[] likelihoodTermBlocks;
+    /**
+     * GaussianMarg: Y - X*Beta.
+     */ 
+    private Matrix yMinXbeta;
+    /**
+     * GaussianMarg: A part of the likelihood calculation to be stored, allowing minor updates
+     * iteration to iteration. For GaussianMarg this is the likelihood score
+     * term.
+     **/
+    public double likelihoodTerm;
+    /**
+     * GaussianMargCong: Block specific matrix products. This is the
+     * (LInvt)'X_g(X_g'X_g)^-1X_gLInvt
+     * which are useful when only tau is updated
+     **/
+    public double[] S_Gamma_MatrixProductBlocks;
     
     /**
      * 
@@ -175,6 +178,22 @@ public class IterationValues {
      * 0: Removal, 1: Addition, 2: Swap, 3: Null.
      */
     public int whichMove;
+    /**
+     * Indicates what the probability of removing a covariate was for this
+     * instance of IterationValues.
+     * 0: Removal, 1: Addition, 2: Swap, 3: Null.
+     */
+    public double probRemove;
+    /**
+     * Indicates what the probability of adding a covariate was for this
+     * instance of IterationValues.
+     */
+    public double probAdd;
+    /**
+     * Indicates what the probability of a swap move was for this
+     * instance of IterationValues.
+     */
+    public double probSwap;
     /**
      * In the case of a null move, and beta update, indicates which beta was
      * updated.
@@ -220,23 +239,25 @@ public class IterationValues {
             Arguments arguments,
             Data data,
             Priors priors) {
+        /**
+         * General. Setup parameters which are always used.
+         */
+        
         totalNumberOfCovariates = data.totalNumberOfCovariates;
         numberOfCovariatesToFixInModel = data.numberOfCovariatesToFixInModel;
-        numberOfClusters = data.numberOfClusters;
-        model = new int[data.totalNumberOfCovariates]; // indicates markers present in current model
-        // Parameters that are updated
-        betas = new Matrix(data.totalNumberOfCovariates,1);
-        clusterIntercepts = new double[data.numberOfClusters]; // log-ORs of current model
-        likelihoodScoreTermsBlocks = new double[data.nBlocks];
-        Xbeta = new Matrix(0,0); // Needs to be initialised, if not used, for setTo
-        XbetaBlocks = new Matrix[data.nBlocks];
-        whichBlocksUpdated = new boolean[data.nBlocks];
+        
+        /**
+         * Alpha, model and betas.
+         */
+        
         if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
                 data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
             alpha = 0;
         } else {
             alpha = arguments.initialAlpha;
         }
+        model = new int[data.totalNumberOfCovariates];
+        betas = new Matrix(data.totalNumberOfCovariates,1);
         for (int v=0; v<data.totalNumberOfCovariates; v++) {
             if ((data.initialModelOption == 1)|(v < data.numberOfCovariatesToFixInModel)) {
                 model[v] = 1;
@@ -250,28 +271,72 @@ public class IterationValues {
         modelDimension = GeneralMethods.countPresVars(data.totalNumberOfCovariates, model);
         modelSpacePartitionDimensions = GeneralMethods.countPresVarsComps(
                 arguments.numberOfModelSpacePriorPartitions, data.modelSpacePartitionIndices, model);
-        logBetweenClusterSd = Math.log(arguments.initialBetweenClusterSd);
-        logBetaPriorSd = new double[data.numberOfUnknownBetaPriors];
-        betaPriorSds = new double[data.numberOfUnknownBetaPriors];
-        for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-            logBetaPriorSd[c] = Math.log(arguments.initialBetaPriorSd);
-            betaPriorSds[c] = Math.exp(logBetaPriorSd[c]);
+        updateMoveProbabilities(arguments);
+        
+        /**
+         * Model space prior parameters.
+         */
+        
+        betaPriorSds = new double[data.numberOfHierarchicalCovariatePriorPartitions];
+        logBetaPriorSds = new double[data.numberOfHierarchicalCovariatePriorPartitions];
+        for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
+            betaPriorSds[c] = arguments.initialBetaPriorSd;
+            if (
+                    data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()|
+                    data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()
+                    ) {
+                /**
+                 * Model selection coefficient
+                 */
+                betaPriorSds[c] = Math.sqrt(data.tau);
+            }
+            logBetaPriorSds[c] = Math.log(betaPriorSds[c]);
         }
+        
+        /**
+         * Weibull scale parameter.
+         */
+        
         weibullScale = arguments.initialWeibullScale;
         logWeibullScale = Math.log(weibullScale);
-        if (data.whichLikelihoodType
-                ==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-            gaussianResidual = Math.sqrt(
-                    data.gaussianResidualVarianceEstimate
-            );
+        
+        /**
+         * Gaussian residual.
+         */
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+            /**
+             * Set according to the informative prior. NECESSARY!
+             */
+            gaussianResidual = Math.sqrt(data.sigma2_invGamma_a/data.sigma2_invGamma_b);
         } else {
-            gaussianResidual = arguments.initialGaussianResidual;            
+            gaussianResidual = arguments.initialGaussianResidual;        
         }
         logGaussianResidual = Math.log(gaussianResidual);
         
+        /**
+         * Terms used in the likelihood calculation.
+         */
         
-        calcLogLike(arguments, data);
-        calcLogPrior(arguments, data, priors);
+        likelihoodTermBlocks = new double[data.nBlocks];
+        S_Gamma_MatrixProductBlocks = new double[data.nBlocks];
+        Xbeta = new Matrix(0,0); // Needs to be initialised, if not used, for setTo
+        XbetaBlocks = new Matrix[data.nBlocks];
+        whichBlocksUpdated = new boolean[data.nBlocks];
+        
+        /**
+         * Initiate the prior and likelihood.
+         */
+        
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
+            conjugate_calcLogLike(arguments, data);
+            if (data.modelTau==1) {
+                conjugate_calcLogPrior(arguments, data, priors);                
+            }
+        } else {
+            calcLogLike(arguments, data);
+            calcLogPrior(arguments, data, priors);            
+        }
     }
     
     /**
@@ -282,28 +347,43 @@ public class IterationValues {
      * parameters equal to.
      */
     public void setTo(IterationValues its) {
-        // Vectors
-        clusterIntercepts = its.clusterIntercepts.clone();
+        /**
+         * Vector array parameters.
+         */
         model = its.model.clone();
         modelSpacePartitionDimensions = its.modelSpacePartitionDimensions.clone();
-        logBetaPriorSd = its.logBetaPriorSd.clone();
+        logBetaPriorSds = its.logBetaPriorSds.clone();
         betaPriorSds = its.betaPriorSds.clone();
-        likelihoodScoreTermsBlocks = its.likelihoodScoreTermsBlocks.clone();
+        likelihoodTermBlocks = its.likelihoodTermBlocks.clone();
+        S_Gamma_MatrixProductBlocks = its.S_Gamma_MatrixProductBlocks.clone();
         
-        // Single values
+        /**
+         * Single parameters.
+         */
         alpha = its.alpha;
-        modelDimension = its.modelDimension;
-        logBetweenClusterSd = its.logBetweenClusterSd;
         weibullScale = its.weibullScale;
         logWeibullScale = its.logWeibullScale;
         gaussianResidual = its.gaussianResidual;
         logGaussianResidual = its.logGaussianResidual;
-        likelihoodScoreTerm = its.likelihoodScoreTerm;
+        
+        /**
+         * Likelihood and prior.
+         */
+        likelihoodTerm = its.likelihoodTerm;
         logLikelihood = its.logLikelihood;
         logPrior = its.logPrior;
         
-        // Jama objects
-        alphaJama = its.alphaJama;  // Copy does not work for some reason
+        /**
+         * Model dimension and move probabilities.
+         */
+        modelDimension = its.modelDimension;
+        probRemove = its.probRemove;
+        probAdd = its.probAdd;
+        probSwap = its.probSwap;
+        
+        /**
+         * Matrices used in the likelihood calculation.
+         */
         betas = its.betas.copy();
         Xbeta = its.Xbeta.copy();
         XbetaBlocks = its.XbetaBlocks.clone();
@@ -354,96 +434,512 @@ public class IterationValues {
         } else if (whichMove == 2) {
             updateBetaSwap(propsds, randomDraws);
         } else if (whichMove == 3) {
-            // NULL MOVE (split by whether there are random intercepts)
-            if (data.numberOfClusters > 0) {
-                // NULL MOVE - Region intercepts ------------------------------
-                double paramTypeDraw = randomDraws.nextInt( (4+data.numberOfUnknownBetaPriors+data.nExtraParametersBeyondLinPred) );
-                if (paramTypeDraw == 0) {
-                    if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-                        // Alpha is fixed for the approximate meta-analysis
-                        // methods, hence update the gaussianResidual instead
-                        updateGaussianResidual(propsds, randomDraws);                        
-                    } else {
-                        updateAlpha(propsds, randomDraws);
-                    }
-                } else if (paramTypeDraw == 1) {
-                    if (modelDimension>0) {
-                        updateBetas(propsds, randomDraws, data);
-                    } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-                        updateGaussianResidual(propsds, randomDraws);                        
-                    } else {
-                        updateAlpha(propsds, randomDraws);                        
-                    }
-                } else if (paramTypeDraw == 2) {
-                    updateBetweenClusterSd(propsds, randomDraws);
-                } else if (paramTypeDraw == 3) {
-                    updateClusterIntercepts(propsds, randomDraws);
-                } else if (paramTypeDraw == 4) {
-                    if (data.numberOfUnknownBetaPriors>0) {
-                        updateBetaPriorSd(propsds, randomDraws, data.numberOfUnknownBetaPriors);                        
-                    } else if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
-                        updateWeibullK(propsds, randomDraws);                        
-                    } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
-                            data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-                        updateGaussianResidual(propsds, randomDraws);                        
-                    }
-                } else if (paramTypeDraw == 5) {
+            // NULL MOVE for when no clusters intercepts -----------------------
+            double paramTypeDraw = randomDraws.nextInt((2+data.numberOfHierarchicalCovariatePriorPartitions+data.nExtraParametersBeyondLinPred));
+            if (paramTypeDraw == 0) {
+                if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+                    updateGaussianResidual(propsds, randomDraws);                        
+                } else {
+                    updateAlpha(propsds, randomDraws);
+                }                    
+            } else if (paramTypeDraw == 1) {
+                if (modelDimension>0) {
+                    updateBetas(propsds, randomDraws, data);
+                } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+                    updateGaussianResidual(propsds, randomDraws);                        
+                } else {
+                    updateAlpha(propsds, randomDraws);                        
+                }
+            } else if (paramTypeDraw == 2) {
+                if (data.numberOfHierarchicalCovariatePriorPartitions>0) {
+                    updateBetaPriorSd(propsds, randomDraws, data.numberOfHierarchicalCovariatePriorPartitions);                        
+                } else if (data.nExtraParametersBeyondLinPred==1) {
                     if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
                         updateWeibullK(propsds, randomDraws);
                     } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
-                            data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+                        data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
                         updateGaussianResidual(propsds, randomDraws);                                                
                     }
                 }
-            } else {
-            // NULL MOVE for when no clusters intercepts -----------------------
-                double paramTypeDraw = randomDraws.nextInt((2+data.numberOfUnknownBetaPriors+data.nExtraParametersBeyondLinPred));
-                if (paramTypeDraw == 0) {
-                    if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-                        updateGaussianResidual(propsds, randomDraws);                        
-                    } else {
-                        updateAlpha(propsds, randomDraws);
-                    }                    
-                } else if (paramTypeDraw == 1) {
-                    if (modelDimension>0) {
-                        updateBetas(propsds, randomDraws, data);
-                    } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-                        updateGaussianResidual(propsds, randomDraws);                        
-                    } else {
-                        updateAlpha(propsds, randomDraws);                        
-                    }
-                } else if (paramTypeDraw == 2) {
-                    if (data.numberOfUnknownBetaPriors>0) {
-                        updateBetaPriorSd(propsds, randomDraws, data.numberOfUnknownBetaPriors);                        
-                    } else if (data.nExtraParametersBeyondLinPred==1) {
-                        if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
-                            updateWeibullK(propsds, randomDraws);
-                        } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
-                            data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-                            updateGaussianResidual(propsds, randomDraws);                                                
-                        }
-                    }
-                } else if (paramTypeDraw == 3) {
-                    // Weibull k or Gaussian residual
-                    if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
-                        updateWeibullK(propsds, randomDraws);
-                    } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
-                            data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
-                        updateGaussianResidual(propsds, randomDraws);                                                
-                    }
+            } else if (paramTypeDraw == 3) {
+                // Weibull k or Gaussian residual
+                if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
+                    updateWeibullK(propsds, randomDraws);
+                } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
+                        data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+                    updateGaussianResidual(propsds, randomDraws);                                                
                 }
             }
         }
         
         calcLogPrior(arguments, data, priors);
-        if (data.numberOfClusters>0) {
-            calcLogLike(arguments, data);
-        } else {
-            calcLogLike_IncrementFromProposal(arguments, data, curr);
-        }
-        
+        calcLogLike_IncrementFromProposal(arguments, data, curr);
         acceptanceProbability(arguments, data, curr, propsds);
     }
+        
+    
+    /**
+     * Calculates the log-likelihood according to the stored model and parameter
+     * values, and a dataset, and stores in {@link Objects.IterationValues#logLikelihood}.
+     * 
+     * @param arguments {@link Objects.Arguments} class object, containing all 
+     * modeling arguments
+     * @param data {@link Objects.Data} class object, containing all the data to
+     * be analysed
+     */
+    public final void conjugate_calcLogLike(
+            Arguments arguments,
+            Data data) {
+
+        /***
+         * Use the linear predictor to calculate the log-likelihood
+         */
+        logLikelihood = 0;
+        double tau = betaPriorSds[0]*betaPriorSds[0];        
+        
+        /**
+         * 
+         * IPD conjugate Gaussian model likelihood calculation.
+         * 
+         */
+//        System.out.println("Beta A "+arguments.modelSpaceBetaBinomialPriorHyperparameterA[0]);
+//        System.out.println("Beta B "+arguments.modelSpaceBetaBinomialPriorHyperparameterB[0]);
+//        System.out.println("DIM "+modelDimension);
+//        System.out.println("Tau "+tau);
+//        System.out.println("Gpior "+data.useGPrior);
+//        System.out.println("gamma1 "+data.sigma2_invGamma_a);
+//        System.out.println("gamma2 "+data.sigma2_invGamma_b);
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
+            if (modelDimension==0) {
+                logLikelihood = 
+                        -((2*data.sigma2_invGamma_a+data.numberOfIndividuals-1)/2)
+                        *Math.log(2*data.sigma2_invGamma_b+data.YtY);                
+            } else {
+                /**
+                 * Get list of included covariate(s). Used to extract X_gamma.
+                 */
+                int[] covInds = GeneralMethods.getVarIndices(
+                        modelDimension,model);
+                /**
+                 * Extract X_g and X_g'X_g.
+                 */
+                Matrix X_g = data.X.getMatrix(
+                        0,
+                        data.numberOfIndividuals-1,
+                        covInds);
+                Matrix X_gTX_g = data.XtX.getMatrix(
+                        covInds,
+                        covInds);                
+                if (data.useGPrior==0) {
+                    /**
+                     * For the independence prior we add tau to each element
+                     * of the X_gamma'X_gamma diaganol before taking the
+                     * inverse and determinant below.
+                     */
+                    for (int v=0; v<modelDimension; v++) {
+                        X_gTX_g.set(v, v, (X_gTX_g.get(v, v)+tau) );
+                    }
+                }
+
+                /**
+                 * Calculate the complex matrix product in S_g.
+                 */
+                double S_Gamma_MatrixProduct = (
+                        data.Y.transpose().times(
+                                X_g.times(
+                                        X_gTX_g.inverse()
+                                ).times(
+                                        X_g.transpose().times(data.Y)
+                                ))
+                        ).get(0, 0);
+
+                /**
+                 * Calculate S_gamma, and the loglikelihood contribution from
+                 * the block.
+                 */
+                if (data.useGPrior==1) {
+                    double S_gamma = data.YtY
+                            - (tau/(1+tau))*S_Gamma_MatrixProduct;
+                    logLikelihood = 
+                            -(modelDimension/2)*Math.log(tau+1)
+                            -((2*data.sigma2_invGamma_a+data.numberOfIndividuals-1)/2)
+                            *Math.log(2*data.sigma2_invGamma_b+S_gamma);                                
+                } else if (data.useGPrior==0) {
+                    double S_gamma = data.YtY
+                            - S_Gamma_MatrixProduct;
+                    logLikelihood = 
+                            -(modelDimension/2)*Math.log(tau)
+                            -0.5*Math.log(X_gTX_g.det())
+                            -((2*data.sigma2_invGamma_a+data.numberOfIndividuals-1)/2)
+                            *Math.log(2*data.sigma2_invGamma_b+S_gamma);                    
+                }                
+            }
+            // System.out.println(logLikelihood);
+        }
+        
+        /**
+         * 
+         * Marginal Gaussian model likelihood calculation.
+         * 
+         */
+        
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()) {
+            int[] modelDimByBlock = GeneralMethods.countPresVarsComps(
+                    data.nBlocks,
+                    data.blockIndices,
+                    model);
+            for (int b=0; b<data.nBlocks; b++) {
+                if (modelDimByBlock[b]==0) {
+                    /**
+                     * MUCH simpler loglikelihood contribution from the block.
+                     * Should be the same whether using independence or g-prior?
+                     */
+                    likelihoodTermBlocks[b] = 
+                            -((2*data.sigma2_invGamma_a+data.blockSizes[b]-1)/2)
+                            *Math.log(2*data.sigma2_invGamma_b+data.YtY_Blocks[b]);                
+                } else if (modelDimByBlock[b] > 0) {
+                    /**
+                     * Get list of included covariate(s). Used to extract X_gamma.
+                     */
+                    int[] covIndsBlock = GeneralMethods.getVarIndices(
+                            modelDimByBlock[b],
+                            Arrays.copyOfRange(
+                                    model,
+                                    data.blockIndices[b],
+                                    data.blockIndices[b+1])
+                    );
+                    /**
+                     * Extract X_g and X_g'X_g.
+                     */
+                    Matrix X_g = data.X_Blocks[b].getMatrix(
+                            0,
+                            data.blockSizes[b]-1,
+                            covIndsBlock);
+                    Matrix X_gTX_g = data.XtX_Blocks[b].getMatrix(
+                            covIndsBlock,
+                            covIndsBlock);
+                    if (data.useGPrior==0) {
+                        /**
+                         * For the independence prior we add tau to each element
+                         * of the X_gamma'X_gamma diaganol before taking the
+                         * inverse and determinant below.
+                         */
+                        for (int v=0; v<modelDimByBlock[b]; v++) {
+                            X_gTX_g.set(v, v, (X_gTX_g.get(v, v)+tau) );
+                        }
+                    }
+                    /**
+                     * Calculate the complex matrix product in S_g.
+                     */
+                    S_Gamma_MatrixProductBlocks[b] = (
+                            data.Y_Blocks[b].transpose().times(
+                                    X_g.times(
+                                            X_gTX_g.inverse()
+                                    ).times(
+                                            X_g.transpose().times(data.Y_Blocks[b])
+                                    ))
+                            ).get(0, 0);
+
+                    /**
+                     * Calculate S_gamma, and the loglikelihood contribution from
+                     * the block.
+                     */
+                    if (data.useGPrior==1) {
+                        double S_gamma = data.YtY_Blocks[b]
+                                - (tau/(1+tau))*S_Gamma_MatrixProductBlocks[b];
+                        likelihoodTermBlocks[b] = 
+                                -(modelDimByBlock[b]/2)*Math.log(tau+1)
+                                -((2*data.sigma2_invGamma_a+data.blockSizes[b]-1)/2)
+                                *Math.log(2*data.sigma2_invGamma_b+S_gamma);                                
+                    } else if (data.useGPrior==0) {
+                        double S_gamma = data.YtY_Blocks[b]
+                                - S_Gamma_MatrixProductBlocks[b];
+                        likelihoodTermBlocks[b] = 
+                                -(modelDimByBlock[b]/2)*Math.log(tau)
+                                -0.5*Math.log(X_gTX_g.det())
+                                -((2*data.sigma2_invGamma_a+data.blockSizes[b]-1)/2)
+                                *Math.log(2*data.sigma2_invGamma_b+S_gamma);                    
+                    }
+                }
+
+                /**
+                 * Add block contribution to likelihood total.
+                 */
+
+                logLikelihood = logLikelihood + likelihoodTermBlocks[b];
+            }            
+        } // End of marginal model loop
+
+    }    
+    
+        
+    
+    /**
+     * Efficiently calculates the log-likelihood by modifying the previously
+     * stored value according to the specific changes to the model and parameter
+     * values since then, and stores in {@link Objects.IterationValues#logLikelihood}.
+     * 
+     * @param arguments {@link Objects.Arguments} class object, containing all 
+     * modeling arguments
+     * @param data {@link Objects.Data} class object, containing all the data to
+     * be analysed
+     * @param curr {@link Objects.IterationValues} class object containing the previous
+     * model and parameter values, to use as a starting point
+     */
+    public final void conjugate_calcLogLike_IncrementFromProposal(
+            Arguments arguments,
+            Data data,
+            IterationValues curr) {
+        
+        double tau = betaPriorSds[0]*betaPriorSds[0];
+        
+        /**
+         * IPD conjugate Gaussian model likelihood calculation.
+         */
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
+            if (whichMove < 3) {
+                conjugate_calcLogLike(arguments, data);
+            } else if (whichMove==3) {
+                conjugate_calcLogLike(arguments, data);                
+            }            
+        }
+        
+        /**
+         * Marginal Gaussian model likelihood calculation.
+         */
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()) {
+            /**
+             * Get model dimension by block and re-calculate tau. This will be used
+             * whether moveType is 3 (null) or less than 3 (add, delete or swap).
+             */        
+            int[] modelDimByBlock = GeneralMethods.countPresVarsComps(
+                    data.nBlocks,
+                    data.blockIndices,
+                    model);
+
+            if (whichMove<3) {
+                /**
+                 * Determine which blocks were updated. and update score for
+                 * those only
+                 */
+                whichBlocksUpdated = GeneralMethods.determineUpdatedBlocks(
+                        data.nBlocks,
+                        data.blockIndices,
+                        whichMove,
+                        whichBetaRemoved,
+                        whichBetaAdded,
+                        whichBetaUpdated);                
+                for (int b=0; b<data.nBlocks; b++) {
+                    if (whichBlocksUpdated[b]) {                    
+                        if (modelDimByBlock[b]==0) {
+                            /**
+                             * MUCH simpler loglikelihood contribution from the block.
+                             * I think this is the same for the independence and
+                             * g-prior.
+                             */
+                            likelihoodTermBlocks[b] = 
+                                    -((2*data.sigma2_invGamma_a+data.blockSizes[b]-1)/2)
+                                    *Math.log(2*data.sigma2_invGamma_b+data.YtY_Blocks[b]);                
+                        } else if (modelDimByBlock[b] > 0) {
+
+                            /**
+                             * Get list of included covariate(s). Used to extract X_gamma.
+                             */
+                            int[] covIndsBlock = GeneralMethods.getVarIndices(
+                                    modelDimByBlock[b],
+                                    Arrays.copyOfRange(
+                                            model,
+                                            data.blockIndices[b],
+                                            data.blockIndices[b+1])
+                            );
+                            /**
+                             * Extract X_g and X_g'X_g.
+                             */
+                            Matrix X_g = data.X_Blocks[b].getMatrix(
+                                    0,
+                                    data.blockSizes[b]-1,
+                                    covIndsBlock);
+                            Matrix X_gTX_g = data.XtX_Blocks[b].getMatrix(
+                                    covIndsBlock,
+                                    covIndsBlock);
+                            if (data.useGPrior==0) {
+                                /**
+                                 * For the independence prior we add tau to each element
+                                 * of X_gamma'X_gamma before taking the inverse
+                                 */
+                                for (int v=0; v<modelDimByBlock[b]; v++) {
+                                    X_gTX_g.set(v, v, (X_gTX_g.get(v, v)+tau) );
+                                }
+                            }
+                            /**
+                             * Calculate the complex matrix product in S_g.
+                             */
+                            S_Gamma_MatrixProductBlocks[b] = (
+                                    data.Y_Blocks[b].transpose().times(
+                                            X_g.times(
+                                                    X_gTX_g.inverse()
+                                            ).times(
+                                                    X_g.transpose().times(data.Y_Blocks[b])
+                                            ))
+                                    ).get(0, 0);
+                            /**
+                             * Calculate S_gamma, and the loglikelihood contribution from
+                             * the block. This is all a function of tau.
+                             */
+                            if (data.useGPrior==1) {
+                                double S_gamma = data.YtY_Blocks[b]
+                                        - (tau/(1+tau))*S_Gamma_MatrixProductBlocks[b];
+                                likelihoodTermBlocks[b] = 
+                                        -(modelDimByBlock[b]/2)*Math.log(tau+1)
+                                        -((2*data.sigma2_invGamma_a+data.blockSizes[b]-1)/2)
+                                        *Math.log(2*data.sigma2_invGamma_b+S_gamma);
+                            } else if (data.useGPrior==0) {
+                                double S_gamma = data.YtY_Blocks[b]
+                                        - S_Gamma_MatrixProductBlocks[b];
+                                likelihoodTermBlocks[b] = 
+                                        -(modelDimByBlock[b]/2)*Math.log(tau)
+                                        -0.5*Math.log(X_gTX_g.det())
+                                        -((2*data.sigma2_invGamma_a+data.blockSizes[b]-1)/2)
+                                        *Math.log(2*data.sigma2_invGamma_b+S_gamma);                            
+                            }
+                        }
+
+                        /**
+                         * Update total likelihood with the difference.
+                         */
+                        logLikelihood=logLikelihood+
+                                (likelihoodTermBlocks[b]
+                                -curr.likelihoodTermBlocks[b]);
+                    }
+                }
+            } else if (whichMove==3) {
+                /**
+                 * If tau is updated must recalculate likelihood in each block. BUT:
+                 * all the matrix multiplication is already stored.
+                 * 
+                 * NB: For blocks of 0 dimension, tau does not enter the likelihood
+                 * calculation
+                 */
+                logLikelihood = 0;
+                for (int b=0; b<data.nBlocks; b++) {
+                    if (modelDimByBlock[b] > 0) {
+                        /**
+                         * Calculate S_gamma, and the loglikelihood contribution from
+                         * the block. This is all a function of tau.
+                         */
+                        double S_gamma = data.YtY_Blocks[b]
+                                - (tau/(1+tau))*S_Gamma_MatrixProductBlocks[b];
+                        likelihoodTermBlocks[b] = 
+                                -(modelDimByBlock[b]/2)
+                                *Math.log(tau+1)
+                                -((2*data.sigma2_invGamma_a+data.blockSizes[b]-1)/2)
+                                *Math.log(2*data.sigma2_invGamma_b+S_gamma);                                
+                    }
+
+                    /**
+                     * Add block contribution to likelihood total.
+                     */
+                    logLikelihood = logLikelihood + likelihoodTermBlocks[b];
+                }
+            }            
+        } // End of marginal model loop
+    }
+    
+    /**
+     * Calculates the log-prior support of the stored model and parameter
+     * values according to the prior distributions, and stores in 
+     * {@link Objects.IterationValues#logPrior}.
+     * 
+     * @param arguments {@link Objects.Arguments} class object, containing all 
+     * modeling arguments
+     * @param data {@link Objects.Data} class object, containing all the data to
+     * be analysed
+     * @param priors {@link Objects.Priors} class object, containing information
+     * on the prior distributions
+     */
+    public final void conjugate_calcLogPrior(
+            Arguments arguments,
+            Data data,
+            Priors priors) {
+
+        /*
+         * Initiate log-prior.
+         */
+        logPrior = 0;
+        
+        /***
+         * Prior contribution of g-prior tau.
+         ***/
+        
+        /**
+         * NB: Because this prior is in terms of priorVarianceEstimateN, which
+         * is also used for the sigma inverse gamma hyper priors and can take 
+         * very large values leave it COMMENTED OUT. It
+         * can result in NaN's with very varianceEstimateN's meaning the program
+         * fails (this is called from the IterationValues Constructor),
+         */
+        if (data.numberOfHierarchicalCovariatePriorPartitions > 0) {
+            for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
+                logPrior = logPrior +
+                        Math.log(priors.betaPrecisionGammaPrior.density(
+                                (double) (1/(betaPriorSds[c]*betaPriorSds[c]))));
+            }
+        }
+//        System.out.println("Prior for tau "+logPrior);
+    }
+    
+    
+    
+    /**
+     * FOR USE WITH THE G-PRIOR: Generates a new model from the current state
+     * and proposal distributions, and stores in the place of the current model.
+     *  
+     * @param arguments {@link Objects.Arguments} class object, containing all 
+     * modeling arguments
+     * @param data {@link Objects.Data} class object, containing all the data to
+     * be analysed
+     * @param curr {@link Objects.IterationValues} class object containing the current
+     * model and parameter values
+     * @param priors {@link Objects.Priors} class object, containing information
+     * on the prior distributions
+     * @param propsds {@link Objects.ProposalDistributions} class object, containing all
+     * proposal distribution SDs
+     * @param randomDraws A random number generator object
+     */    
+    public void conjugate_update(
+            Arguments arguments,
+            Data data,
+            IterationValues curr,
+            Priors priors,
+            ProposalDistributions propsds,
+            Random randomDraws) {
+        
+        /**
+         * 
+         * Update the model (move type is chosen too.
+         * 
+         */
+        updateModel(arguments, data, randomDraws);
+        
+        if (whichMove == 3) {
+            /**
+             * NULL move. Only occurs if modelTau = 1.
+             */
+            updateBetaPriorSd(propsds, randomDraws, data.numberOfHierarchicalCovariatePriorPartitions);
+            // Recalculate prior for tau = betaPriorSd^2
+            conjugate_calcLogPrior(arguments, data, priors);
+        } else if (whichMove == 0) {
+            betas.set(whichBetaRemoved,0,0);
+        }  else if (whichMove == 1) {
+            betas.set(whichBetaAdded,0,1);
+        }  else if (whichMove == 2) {
+            betas.set(whichBetaAdded,0,1);
+            betas.set(whichBetaRemoved,0,0);
+        }
+
+        conjugate_calcLogLike_IncrementFromProposal(arguments, data, curr);
+        acceptanceProbability(arguments, data, curr, propsds);
+    }    
     
     /**
      * Updates the intercept parameter {@link Objects.IterationValues#alpha}
@@ -564,24 +1060,7 @@ public class IterationValues {
                 r);
         betas.set(whichBetaAdded,0,newbeta);
     }
-    
-    /**
-     * Updates the between clusters SD parameter 
-     * {@link Objects.IterationValues#logBetweenClusterSd}
-     * 
-     * @param propsds {@link Objects.ProposalDistributions} class object, containing all
-     * proposal distribution SDs
-     * @param r Random number generator object
-     */
-    public void updateBetweenClusterSd(
-            ProposalDistributions propsds,
-            Random r) {
-        whichParameterTypeUpdated = ParameterTypes.BETWEEN_CLUSTER_SD.ordinal();
-        logBetweenClusterSd = GeneralMaths.normalDraw(
-                logBetweenClusterSd,
-                propsds.proposalDistributionSds[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()], r);
-    }
-    
+        
     /**
      * Updates the unknown prior SD common to the betas 
      * {@link Objects.IterationValues#betaPriorSds}
@@ -600,10 +1079,9 @@ public class IterationValues {
         if (nSds>1) {   // Pick one of the SDs at random to update
             sdUpdate = r.nextInt(nSds);
         }
-        logBetaPriorSd[sdUpdate] = GeneralMaths.normalDraw(
-                logBetaPriorSd[sdUpdate],
+        logBetaPriorSds[sdUpdate] = GeneralMaths.normalDraw(logBetaPriorSds[sdUpdate],
                 propsds.proposalDistributionSds[ParameterTypes.BETA_PRIOR_SD.ordinal()], r);
-        betaPriorSds[sdUpdate] = Math.exp(logBetaPriorSd[sdUpdate]);
+        betaPriorSds[sdUpdate] = Math.exp(logBetaPriorSds[sdUpdate]);
     }
     
      /**
@@ -627,7 +1105,7 @@ public class IterationValues {
          */
         if (whichMove == 0 | whichMove == 2) {
             Xbeta = Xbeta.minus(
-                    data.dataJama.getMatrix(0, data.numberOfIndividuals-1,
+                    data.X.getMatrix(0, data.numberOfIndividuals-1,
                             whichBetaRemoved, whichBetaRemoved)
                     .times(
                     curr.betas.get(whichBetaRemoved,0)
@@ -640,7 +1118,7 @@ public class IterationValues {
          */
         if (whichMove == 1 | whichMove == 2) {
             Xbeta = Xbeta.plus(
-                    data.dataJama.getMatrix(0, data.numberOfIndividuals-1,
+                    data.X.getMatrix(0, data.numberOfIndividuals-1,
                             whichBetaAdded, whichBetaAdded)
                     .times(
                     (betas.get(whichBetaAdded,0)-
@@ -654,7 +1132,7 @@ public class IterationValues {
          */
         if (whichMove == 3 & whichParameterTypeUpdated == ParameterTypes.BETAS.ordinal()) {
             Xbeta = Xbeta.plus(
-                    data.dataJama.getMatrix(0, data.numberOfIndividuals-1,
+                    data.X.getMatrix(0, data.numberOfIndividuals-1,
                             whichBetaUpdated, whichBetaUpdated)
                     .times(
                     (betas.get(whichBetaUpdated, 0)-
@@ -668,20 +1146,8 @@ public class IterationValues {
          */
         if (whichMove == 3 & whichParameterTypeUpdated == ParameterTypes.ALPHA.ordinal()) {
             Matrix alphaDelta = new Matrix(data.numberOfIndividuals,1);
-            if (data.numberOfClusters >0 ) {
-                for (int i=0; i<data.numberOfIndividuals; i++) {
-                    alphaDelta.set(i, 0,
-                            (
-                            (alpha-curr.alpha)
-                            + (clusterIntercepts[(data.clusters[i]-1)]-
-                            curr.clusterIntercepts[(data.clusters[i]-1)])
-                            )
-                            );
-                }
-            } else {
-                for (int i=0; i<data.numberOfIndividuals; i++) {
-                    alphaDelta.set(i, 0, (alpha-curr.alpha) );
-                }
+            for (int i=0; i<data.numberOfIndividuals; i++) {
+                alphaDelta.set(i, 0, (alpha-curr.alpha) );
             }
             Xbeta = Xbeta.plus(alphaDelta);
         }
@@ -710,7 +1176,7 @@ public class IterationValues {
         if (whichMove == 0 | whichMove == 2) {
             XbetaBlocks[whichBetaRemovedBlock]
                     = XbetaBlocks[whichBetaRemovedBlock]
-                            .minus((data.dataJamaBlocks[whichBetaRemovedBlock]
+                            .minus((data.X_Blocks[whichBetaRemovedBlock]
                                     .getMatrix(0,
                                             data.blockSizes[whichBetaRemovedBlock]-1,
                                             (whichBetaRemoved-data.cumulativeBlockSizes[whichBetaRemovedBlock]),
@@ -725,7 +1191,7 @@ public class IterationValues {
         if (whichMove == 1 | whichMove == 2) {
             XbetaBlocks[whichBetaAddedBlock]
                     = XbetaBlocks[whichBetaAddedBlock]
-                            .plus((data.dataJamaBlocks[whichBetaAddedBlock]
+                            .plus((data.X_Blocks[whichBetaAddedBlock]
                                     .getMatrix(0,
                                             data.blockSizes[whichBetaAddedBlock]-1,
                                             (whichBetaAdded-data.cumulativeBlockSizes[whichBetaAddedBlock]),
@@ -740,7 +1206,7 @@ public class IterationValues {
         if (whichMove == 3 & whichParameterTypeUpdated == ParameterTypes.BETAS.ordinal()) {
             XbetaBlocks[whichBetaUpdatedBlock]
                     = XbetaBlocks[whichBetaUpdatedBlock]
-                            .plus((data.dataJamaBlocks[whichBetaUpdatedBlock]
+                            .plus((data.X_Blocks[whichBetaUpdatedBlock]
                                     .getMatrix(0,
                                             data.blockSizes[whichBetaUpdatedBlock]-1,
                                             (whichBetaUpdated-data.cumulativeBlockSizes[whichBetaUpdatedBlock]),
@@ -786,25 +1252,6 @@ public class IterationValues {
     }
     
     /**
-     * Updates the clusters intercepts {@link Objects.IterationValues#clusterIntercepts}
-     * 
-     * @param propsds {@link Objects.ProposalDistributions} class object, containing all
-     * proposal distribution SDs
-     * @param r Random number generator object
-     */
-    public void updateClusterIntercepts(
-            ProposalDistributions propsds,
-            Random r) {
-        whichParameterTypeUpdated = ParameterTypes.CLUSTER_INTERCEPTS.ordinal();
-        for (int i=0; i<numberOfClusters; i++) {
-            clusterIntercepts[i] = GeneralMaths.normalDraw(
-                    clusterIntercepts[i],
-                    propsds.proposalDistributionSds[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()], r);
-            
-        }
-    }
-
-    /**
      * Updates the {@link Objects.IterationValues#model} by first choosing a move,
      * then choosing which (if any) of the betas to add/remove
      * 
@@ -818,21 +1265,25 @@ public class IterationValues {
             Arguments arguments,
             Data data,
             Random randomDraws) {
-            // Count number variables included in current model to determine
-            // whichMove
-        whichMove = GeneralMethods.chooseMove( (totalNumberOfCovariates-numberOfCovariatesToFixInModel),
-                    arguments.maximumModelDimension,
-                    (modelDimension-numberOfCovariatesToFixInModel),
-                    arguments.moveProbabilities,randomDraws);
+
+        /**
+         * Randomly draw move according to probabilities associated with the
+         * current dimension.
+         */
+        whichMove = GeneralMethods.chooseMove(
+                probRemove, probAdd, probSwap, randomDraws);
+
         if (arguments.useReversibleJump == 0) {whichMove = 3;}
         
         int presentMarkN = modelDimension - numberOfCovariatesToFixInModel;
+        int missMarkN = totalNumberOfCovariates - numberOfCovariatesToFixInModel - presentMarkN;
         int markRem;
         int markAdd;
-
-        if ((whichMove==0)||(whichMove==2)) {
-            // If whichMove is removal (0) or swap (2) choose at random a marker
-            // to remove and place a 1 in corresponding position in presentMark
+        
+        if (whichMove==0) {
+            /**
+             * If move is removal, choose a marker to remove.
+             */
             markRem = randomDraws.nextInt(presentMarkN);
             int count = 0;
             if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
@@ -864,12 +1315,10 @@ public class IterationValues {
                     }
                 }                
             }
-        }
-
-        int missMarkN = totalNumberOfCovariates - numberOfCovariatesToFixInModel - presentMarkN;
-        if ((whichMove==1)||(whichMove==2)) {
-            // If whichMove is addition (1) or swap (2) choose at random a marker
-            // to add and place a 1 in corresponding position in presentMark
+        } else if (whichMove==1) {
+            /**
+             * If move is addition, choose a marker to add.
+             */
             markAdd = randomDraws.nextInt(missMarkN);
             int count = 0;
             if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
@@ -899,12 +1348,114 @@ public class IterationValues {
                     }
                 }                
             }
-        }        
+        } else if (whichMove==2) {
+            /**
+             * If move is swap, choose marker to remove and another to add.
+             * MUST HANDLE SWAP SEPEARTELY. Or else re-add a removed marker
+             * after updating the model index to 0.
+             */
+            markRem = randomDraws.nextInt(presentMarkN);
+            markAdd = randomDraws.nextInt(missMarkN);
+            int countRemove = 0;
+            int countAdd = 0;
+            if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+                /**
+                 * Loop over blocks for GaussianMarg
+                 */
+                for (int b=0; b<data.nBlocks; b++) {
+                    for (int m=data.blockIndices[b]; m<data.blockIndices[b+1]; m++) {
+                        if (model[m]==1) {
+                            if (countRemove==markRem) {
+                                whichBetaRemoved = m;
+                                whichBetaRemovedBlock = b;
+                                model[m] = 0;
+                                betas.set(m, 0, 0);
+                            }
+                            countRemove++;
+                        } else if (model[m]==0) {
+                            if (countAdd==markAdd) {
+                                whichBetaAdded = m;
+                                whichBetaAddedBlock = b;
+                                model[m] = 1;
+                            }
+                            countAdd++;                            
+                        }          
+                    }
+                }
+            } else {
+                for (int m=numberOfCovariatesToFixInModel; m<totalNumberOfCovariates; m++) {
+                    if (model[m]==1) {
+                        if (countRemove==markRem) {
+                            whichBetaRemoved = m;
+                            model[m] = 0;
+                            betas.set(m, 0, 0);
+                        }
+                        countRemove++;
+                    } else if (model[m]==0) {
+                        if (countAdd==markAdd) {
+                            whichBetaAdded = m;
+                            model[m] = 1;
+                        }
+                        countAdd++;                        
+                    }
+                }                
+            }            
+        }
 
         modelDimension = GeneralMethods.countPresVars(totalNumberOfCovariates, model);
         modelSpacePartitionDimensions = GeneralMethods.countPresVarsComps(
                 arguments.numberOfModelSpacePriorPartitions, data.modelSpacePartitionIndices, model);
-        
+        /**
+         * Update move probabilities according to the new dimension. Only
+         * necessary if a non-null move.
+         */
+        if (whichMove != 3) {
+            updateMoveProbabilities(arguments);            
+        }
+    }
+    
+    /**
+     * Updates the move probabilities. For use after a change (and corresponding
+     * recalculation of) the model dimension.
+     * 
+     * @param arguments {@link Objects.Arguments} class object, containing all 
+     * modeling arguments
+     */
+    public final void updateMoveProbabilities(
+            Arguments arguments) {
+        /* 
+        * NB: modelDimension INCLUDES the fixed covariates
+        */
+        if ( (modelDimension-numberOfCovariatesToFixInModel)==0) {
+            /**
+             * Null model. Can only add (and null)
+             */
+            probRemove = 0;
+            probAdd = 1-arguments.probNull;
+            probSwap = 0;
+        } else if (modelDimension == totalNumberOfCovariates) {
+            /**
+             * Saturated model. Can only remove (and null)
+             */
+            probRemove = 1-arguments.probNull;
+            probAdd = 0;
+            probSwap = 0;
+        } else if ( (modelDimension-numberOfCovariatesToFixInModel) ==
+                arguments.maximumModelDimension) {
+            /**
+             * Non-saturated but maximum dimension. Can still swap.
+             */
+            probRemove = arguments.probRemove+arguments.probAdd;
+            probAdd = 0;
+            probSwap = arguments.probSwap;
+        } else {
+            /**
+             * All moves possible.
+             */
+            probRemove = arguments.probRemove;
+            probAdd = arguments.probAdd;
+            probSwap = arguments.probSwap;
+        }
     }
 
     /**
@@ -923,18 +1474,10 @@ public class IterationValues {
         /***
          * Start by calculating the linear predictor; alpha + Xbeta
          */
-        // Alpha
         Matrix alphaMat = new Matrix(data.numberOfIndividuals,1);
-        if (data.numberOfClusters >0 ) {
-            for (int i=0; i<data.numberOfIndividuals; i++) {
-                alphaMat.set(i, 0, (alpha + clusterIntercepts[(data.clusters[i]-1)]) );
-            }
-        } else {
-            for (int i=0; i<data.numberOfIndividuals; i++) {
-                alphaMat.set(i, 0, alpha);
-            }
+        for (int i=0; i<data.numberOfIndividuals; i++) {
+            alphaMat.set(i, 0, alpha);
         }
-        // Xbeta
 
         /***
          * Use the linear predictor to calculate the log-likelihood
@@ -942,13 +1485,13 @@ public class IterationValues {
         logLikelihood = 0;        
         if (data.whichLikelihoodType==LikelihoodTypes.LOGISTIC.ordinal()) {
             // Logistic likelihood contributions
-            Xbeta = data.dataJama.times(betas);
+            Xbeta = data.X.times(betas);
             Xbeta.plusEquals(alphaMat);
             double p;
             for (int i=0; i<data.numberOfIndividuals; i++) {
                 p = (double) (Math.exp( Xbeta.get(i, 0) )
                         / (1+Math.exp(Xbeta.get(i, 0)) ));
-                if (data.outcomes[i] == 1) {
+                if (data.binaryOutcomes[i] == 1) {
                     logLikelihood = logLikelihood + Math.log(p);
                 } else {
                     logLikelihood = logLikelihood + Math.log(1-p);
@@ -956,27 +1499,27 @@ public class IterationValues {
             }            
         } else if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
             // Weibull likelihood contributions
-            Xbeta = data.dataJama.times(betas);
+            Xbeta = data.X.times(betas);
             Xbeta.plusEquals(alphaMat);
             for (int i=0; i<data.numberOfIndividuals; i++) {
                 // Log-Hazard function if event occurred at the end of follow up
-                if (data.outcomes[i] == 1) {
+                if (data.binaryOutcomes[i] == 1) {
                     logLikelihood = logLikelihood
                             + Math.log(weibullScale)
                             + weibullScale*Xbeta.get(i, 0)
-                            + (weibullScale-1)*Math.log(data.times[i]);
+                            + (weibullScale-1)*Math.log(data.survivalTimes[i]);
                 }
                 // Log-Survival function
                 logLikelihood = logLikelihood
                         -Math.pow(
-                        (double)(data.times[i]*Math.exp( Xbeta.get(i, 0) )),
+                        (double)(data.survivalTimes[i]*Math.exp( Xbeta.get(i, 0) )),
                         weibullScale);
             }            
         } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()) {
             // Gaussian likelihood contibution (use Weibullk as sigma
-            Xbeta = data.dataJama.times(betas);
+            Xbeta = data.X.times(betas);
             Xbeta.plusEquals(alphaMat);
-            yMinXbeta = data.continuousOutcomesJama.minus(Xbeta);            
+            yMinXbeta = data.Y.minus(Xbeta);            
             logLikelihood = logLikelihood
                     - (double) ((yMinXbeta.transpose().times(yMinXbeta)).get(0, 0)/(2*gaussianResidual*gaussianResidual))
                     - data.numberOfIndividuals*logGaussianResidual;
@@ -985,32 +1528,31 @@ public class IterationValues {
              * Calculate the likelihood score term within each block, summing
              * during the loop
              */
-            likelihoodScoreTerm = 0;
+            likelihoodTerm = 0;
             for (int b=0; b<data.nBlocks; b++) {
-                XbetaBlocks[b] = data.dataJamaBlocks[b].times(betas.getMatrix(
+                XbetaBlocks[b] = data.X_Blocks[b].times(betas.getMatrix(
                                 data.blockIndices[b],
                                 (data.blockIndices[(b+1)]-1), 0, 0));                
-                yMinXbeta = data.continuousOutcomesJama.getMatrix(
+                yMinXbeta = data.Y.getMatrix(
                         data.blockIndices[b],
                         (data.blockIndices[(b+1)]-1),0,0)
                         .minus(XbetaBlocks[b]);            
-                likelihoodScoreTermsBlocks[b] = (yMinXbeta.transpose()
-                        .times(data.xTxInvBlocks[b])
+                likelihoodTermBlocks[b] = (yMinXbeta.transpose()
+                        .times(data.InverseCovarianceMatrix_Blocks[b])
                         .times(yMinXbeta)).get(0,0);
-                likelihoodScoreTerm=likelihoodScoreTerm+likelihoodScoreTermsBlocks[b];
+                likelihoodTerm=likelihoodTerm+likelihoodTermBlocks[b];
             }
             logLikelihood = logLikelihood
-                    - (double) (likelihoodScoreTerm/(2*gaussianResidual*gaussianResidual))
+                    - (double) (likelihoodTerm/(2*gaussianResidual*gaussianResidual))
                     - (double) (data.totalNumberOfCovariates*logGaussianResidual);  
             /***
              * Contribution of observed variance to the residual 
              */
             logLikelihood = logLikelihood + Math.log(
                 GammaDist.density(
-                    (data.gaussianResidualVarianceEstimateN/2),
-                    (data.gaussianResidualVarianceEstimateN/
-                            (2*gaussianResidual*gaussianResidual)),
-                    data.gaussianResidualVarianceEstimate)
+                    data.sigma2_invGamma_a,
+                    (data.sigma2_invGamma_a/(gaussianResidual*gaussianResidual)),
+                    (data.sigma2_invGamma_a/data.sigma2_invGamma_b))
             );
         }
     }
@@ -1047,7 +1589,7 @@ public class IterationValues {
             for (int i=0; i<data.numberOfIndividuals; i++) {
                 p = (double) (Math.exp( Xbeta.get(i, 0) )
                         / (1+Math.exp(Xbeta.get(i, 0)) ));
-                if (data.outcomes[i] == 1) {
+                if (data.binaryOutcomes[i] == 1) {
                     logLikelihood = logLikelihood + Math.log(p);
                 } else {
                     logLikelihood = logLikelihood + Math.log(1-p);
@@ -1063,11 +1605,11 @@ public class IterationValues {
             updateXBetaEfficiently(arguments, data, curr);
             for (int i=0; i<data.numberOfIndividuals; i++) {
                 logLikelihood = logLikelihood 
-                        -(Math.exp( Xbeta.get(i, 0) )*Math.pow(data.times[i], weibullScale));
-                if (data.outcomes[i] == 1) {
+                        -(Math.exp( Xbeta.get(i, 0) )*Math.pow(data.survivalTimes[i], weibullScale));
+                if (data.binaryOutcomes[i] == 1) {
                     logLikelihood = logLikelihood
                             + Math.log(weibullScale)
-                            + ((weibullScale-1)*Math.log(data.times[i]))
+                            + ((weibullScale-1)*Math.log(data.survivalTimes[i]))
                             + Xbeta.get(i, 0);
                 }
             }
@@ -1078,7 +1620,7 @@ public class IterationValues {
          */
         if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()) {
             updateXBetaEfficiently(arguments, data, curr);
-            yMinXbeta = data.continuousOutcomesJama.minus(Xbeta);            
+            yMinXbeta = data.Y.minus(Xbeta);            
             logLikelihood = logLikelihood
                     -(double) ((yMinXbeta.transpose().times(yMinXbeta)).get(0, 0)/(2*gaussianResidual*gaussianResidual))
                     -data.numberOfIndividuals*logGaussianResidual;
@@ -1105,19 +1647,19 @@ public class IterationValues {
                 for (int b=0; b<data.nBlocks; b++) {
                     if (whichBlocksUpdated[b]) {
                         // Calculate score term for block only
-                        yMinXbeta = data.continuousOutcomesJama.getMatrix(
+                        yMinXbeta = data.Y.getMatrix(
                                 data.blockIndices[b],
                                 (data.blockIndices[(b+1)]-1),
                                 0,
                                 0).minus(XbetaBlocks[b]) ;            
-                        likelihoodScoreTermsBlocks[b] = (yMinXbeta.transpose()
-                                .times(data.xTxInvBlocks[b])
+                        likelihoodTermBlocks[b] = (yMinXbeta.transpose()
+                                .times(data.InverseCovarianceMatrix_Blocks[b])
                                 .times(yMinXbeta)
                                 ).get(0, 0);
                         // Update total score with the difference
-                        likelihoodScoreTerm=likelihoodScoreTerm+
-                                (likelihoodScoreTermsBlocks[b]
-                                -curr.likelihoodScoreTermsBlocks[b]);
+                        likelihoodTerm=likelihoodTerm+
+                                (likelihoodTermBlocks[b]
+                                -curr.likelihoodTermBlocks[b]);
                     }
                 }                
             }
@@ -1126,17 +1668,17 @@ public class IterationValues {
              */
             logLikelihood = logLikelihood + Math.log(
                 GammaDist.density(
-                    (data.gaussianResidualVarianceEstimateN/2),
-                    (data.gaussianResidualVarianceEstimateN/
-                            (2*gaussianResidual*gaussianResidual)),
-                    data.gaussianResidualVarianceEstimate)
+                    data.sigma2_invGamma_a,
+                    (data.sigma2_invGamma_a/
+                            (gaussianResidual*gaussianResidual)),
+                    (data.sigma2_invGamma_a/data.sigma2_invGamma_b))
             );
             /**
              * Calculate the log-likelihood, using the score term from above
              * Note that this covers the case for a gaussianResidual update
              **/
             logLikelihood = logLikelihood
-                    - (double) (likelihoodScoreTerm/(2*gaussianResidual*gaussianResidual))
+                    - (double) (likelihoodTerm/(2*gaussianResidual*gaussianResidual))
                     - (double) (data.totalNumberOfCovariates*logGaussianResidual);            
         }
     }
@@ -1182,33 +1724,6 @@ public class IterationValues {
         }
         
         /***
-         * Study specific intercepts
-         ***/        
-        if (data.numberOfClusters >0) {
-            for (int r=0; r<data.numberOfClusters; r++) {
-                // dont need all H, since Hth is implied by rest
-                logPrior = logPrior + GeneralMaths.logNormDens(
-                        clusterIntercepts[r],
-                        0,
-                        Math.exp(logBetweenClusterSd)
-                        );
-            }
-
-            if (arguments.betweenClusterSdPriorFamily == 0) {
-                // uniform prior for SD parameters
-                logPrior = logPrior +
-                        Math.log(priors.betweenClusterPrecisionUniformPrior.density(Math.exp(logBetweenClusterSd)));
-            } else if (arguments.betweenClusterSdPriorFamily==1) {
-                // uniform prior for SD parameters
-                logPrior = logPrior +
-                        Math.log(priors.betweenClusterPrecisionGammaPrior.density(
-                        (double)1/(Math.exp(logBetweenClusterSd)*Math.exp(logBetweenClusterSd))
-                        )
-                        );
-            }
-        }
-        
-        /***
          * Covariates with informative priors
          ***/        
         for (int v = 0; v < data.numberOfCovariatesWithInformativePriors; v++) {
@@ -1224,8 +1739,8 @@ public class IterationValues {
         /***
          * Covariates with unknown priors (and common SD)
          ***/        
-        for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-            for (int v = data.commonBetaPriorPartitionIndices[c]; v < data.commonBetaPriorPartitionIndices[c+1]; v++) {
+        for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
+            for (int v = data.hierarchicalCovariatePriorPartitionIndices[c]; v < data.hierarchicalCovariatePriorPartitionIndices[c+1]; v++) {
                 if (model[v]==1) {
                     logPrior = logPrior
                             + GeneralMaths.logNormDens(
@@ -1239,21 +1754,21 @@ public class IterationValues {
         /***
          * Covariate prior precision(s)
          ***/        
-        if (data.numberOfUnknownBetaPriors > 0) {
+        if (data.numberOfHierarchicalCovariatePriorPartitions > 0) {
             if (arguments.betaPrecisionPriorFamily==0) {
                 // Jeffrey's priors: P(sigma^2)=1/(sigma^2)
-                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
                     logPrior = logPrior - (double) (2*Math.log(betaPriorSds[c]));
                 }
             } else if (arguments.betaPrecisionPriorFamily==1) {
                 // Uniform prior
-                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
                     logPrior = logPrior +
                             Math.log(priors.betaSigmaUniformPrior.density(betaPriorSds[c]));
                 }                
             } else if (arguments.betaPrecisionPriorFamily==2) {
                 // Inverse-gamma prior on the residual variance
-                for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
+                for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
                     logPrior = logPrior +
                             Math.log(priors.betaPrecisionGammaPrior.density(
                                     (double) (1/(betaPriorSds[c]*betaPriorSds[c])) ));
@@ -1305,6 +1820,49 @@ public class IterationValues {
     }
     
     /**
+     * Calculates the prior ratio of the proposed vs current model. For use in
+     * the Reversible Jump acceptance probability calculation.
+     * 
+     * @param arguments {@link Objects.Arguments} class object, containing all 
+     * modeling arguments
+     * @param data {@link Objects.Data} class object, containing all the data to
+     * be analysed
+     * @param curr {@link Objects.IterationValues} class object containing the current
+     * model and parameter values
+     */
+    public void calcLogModelPriorRatio(
+            Arguments arguments,
+            Data data,
+            IterationValues curr
+            ) {
+            // Model Space prior is accounted for, which is not accounted
+            // for in method 'calcLogPrior'. A truncated Poisson Prior for
+            // is used for the model space.
+            logModelPriorRatio = 0;
+            if (arguments.modelSpacePriorFamily==0) {
+                // Poisson model space prior
+                for (int c=0; c<arguments.numberOfModelSpacePriorPartitions; c++) {
+                    logModelPriorRatio = logModelPriorRatio +
+                            GeneralMethods.logModelPriorRatio(
+                            curr.modelSpacePartitionDimensions[c],
+                            modelSpacePartitionDimensions[c],
+                            data.modelSpacePoissonPriorMeans[c]);
+                } 
+            } else if (arguments.modelSpacePriorFamily==1) {
+                // Beta-binomial model space prior
+                for (int c=0; c<arguments.numberOfModelSpacePriorPartitions; c++) {
+                    logModelPriorRatio = logModelPriorRatio +
+                            GeneralMethods.logModelPriorRatioBetaBin(
+                            curr.modelSpacePartitionDimensions[c],
+                            modelSpacePartitionDimensions[c],
+                            data.modelSpacePartitionSizes[c],
+                            arguments.modelSpaceBetaBinomialPriorHyperparameterA[c],
+                            arguments.modelSpaceBetaBinomialPriorHyperparameterB[c]);
+                }
+            }        
+    }
+
+    /**
      * Calculates the Metropolis Hastings Reversible Jump acceptance probability
      * for the model and parameter values in this object vs the previously
      * saved model and parameter values, and stores in the field
@@ -1325,6 +1883,10 @@ public class IterationValues {
             IterationValues curr,
             ProposalDistributions propsds
             ) {
+//            System.out.println("Prop dim "+modelDimension);
+//            System.out.println("Prop like "+logLikelihood);
+//            System.out.println("Curr dim "+curr.modelDimension);
+//            System.out.println("Curr like "+curr.logLikelihood);
             // log-P('prop')
             double logNumerator = logLikelihood+logPrior;
             // log-P('curr')
@@ -1333,73 +1895,70 @@ public class IterationValues {
                 // If removal happened logNumerator needs added to it the
                 // log-probability of adding the removed marker, and drawing
                 // the corresponding removed log-OR
-                logNumerator = logNumerator +
-                        GeneralMaths.logNormDens(curr.betas.get(whichBetaRemoved, 0),
-                        0, propsds.proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()]);
+                if (data.whichLikelihoodType!=
+                        LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()&
+                        data.whichLikelihoodType!=
+                        LikelihoodTypes.GAUSSIAN_CONJ.ordinal()
+                        ) {
+                    // Only do this when not intergating betas out
+                    logNumerator = logNumerator +
+                            GeneralMaths.logNormDens(curr.betas.get(whichBetaRemoved, 0),
+                            0, propsds.proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()]);                    
+                }
                 logNumerator = logNumerator
-                        +Math.log(arguments.moveProbabilities[1]
-                        -arguments.moveProbabilities[0])
+                        +Math.log(probAdd) // Prob prop -> curr with new prob
                         -Math.log(data.totalNumberOfCovariates-modelDimension);
                 logDenominator = logDenominator
-                        +Math.log(arguments.moveProbabilities[0])
+                        +Math.log(curr.probRemove) // Prob curr -> prob with old prob
                         - Math.log(modelDimension-data.numberOfCovariatesToFixInModel +1);
             }
             if (whichMove==1) {
                 // If addition happened logDenominator needs added to it the
                 // log-probability of adding the added marker, and drawing
                 // the corresponding new log-OR
-                logDenominator = logDenominator +
-                        GeneralMaths.logNormDens(betas.get(whichBetaAdded, 0), 0,
-                        propsds.proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()]);
+                if (data.whichLikelihoodType!=
+                        LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()&
+                        data.whichLikelihoodType!=
+                        LikelihoodTypes.GAUSSIAN_CONJ.ordinal()
+                        ) {
+                    // Only do this when not intergating betas out
+                    logDenominator = logDenominator +
+                            GeneralMaths.logNormDens(betas.get(whichBetaAdded, 0), 0,
+                            propsds.proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()]);                    
+                }
                 logNumerator = logNumerator
-                        +Math.log(arguments.moveProbabilities[0])
+                        +Math.log(probRemove) // Prob prop -> curr under new removal prob
                         - Math.log(modelDimension-data.numberOfCovariatesToFixInModel);
                 logDenominator = logDenominator
-                        + Math.log(arguments.moveProbabilities[1]
-                        -arguments.moveProbabilities[0])
+                        + Math.log(curr.probAdd) // Prob curr -> prop under old addition
                         -Math.log(data.totalNumberOfCovariates-modelDimension+1);
             }
-            if (whichMove==2) {
-                // If swap happened logNumerator needs added to it the
-                // log-probability of drawing the removed log-OR and
-                // logDenominator needs added to it the log-probability of
-                // drawing the added log-OR. NOTE: The probabilties of removing
-                // a random marker and adding a random marker cancel since both
-                // 'curr' and 'prop' have the same number of markers present.
-                logNumerator = logNumerator +
-                        GeneralMaths.logNormDens(curr.betas.get(whichBetaRemoved, 0),
-                        0, propsds.proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()]);
-                logDenominator = logDenominator +
-                        GeneralMaths.logNormDens(betas.get(whichBetaAdded, 0),
-                        0, propsds.proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()]);
+            if (data.whichLikelihoodType!=
+                    LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()&
+                    data.whichLikelihoodType!=
+                    LikelihoodTypes.GAUSSIAN_CONJ.ordinal()
+                    ) {
+                /**
+                 * ONLY consists of normal density calculations. So do not need
+                 * to do when integrating out the betas
+                 */
+                if (whichMove==2) {
+                    // If swap happened logNumerator needs added to it the
+                    // log-probability of drawing the removed log-OR and
+                    // logDenominator needs added to it the log-probability of
+                    // drawing the added log-OR. NOTE: The probabilties of removing
+                    // a random marker and adding a random marker cancel since both
+                    // 'curr' and 'prop' have the same number of markers present.
+                    logNumerator = logNumerator +
+                            GeneralMaths.logNormDens(curr.betas.get(whichBetaRemoved, 0),
+                            0, propsds.proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()]);
+                    logDenominator = logDenominator +
+                            GeneralMaths.logNormDens(betas.get(whichBetaAdded, 0),
+                            0, propsds.proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()]);
+                }
             }
-
-            // Model Space prior is accounted for, which is not accounted
-            // for in method 'calcLogPrior'. A truncated Poisson Prior for
-            // is used for the model space.
-            double logModelPriorRatio = 0;
-            if (arguments.modelSpacePriorFamily==0) {
-                // Poisson model space prior
-                for (int c=0; c<arguments.numberOfModelSpacePriorPartitions; c++) {
-                    logModelPriorRatio = logModelPriorRatio +
-                            GeneralMethods.logModelPriorRatio(
-                            curr.modelSpacePartitionDimensions[c],
-                            modelSpacePartitionDimensions[c],
-                            data.modelSpacePoissonPriorMeans[c]);
-                } 
-            } else if (arguments.modelSpacePriorFamily==1) {
-                // Beta-binomial model space prior
-                for (int c=0; c<arguments.numberOfModelSpacePriorPartitions; c++) {
-                    logModelPriorRatio = logModelPriorRatio +
-                            GeneralMethods.logModelPriorRatioBetaBin(
-                            curr.modelSpacePartitionDimensions[c],
-                            modelSpacePartitionDimensions[c],
-                            data.modelSpacePartitionSizes[c],
-                            arguments.modelSpaceBetaBinomialPriorHyperparameterA[c],
-                            arguments.modelSpaceBetaBinomialPriorHyperparameterB[c]);
-                }                
-            }
-
+            
+            calcLogModelPriorRatio(arguments,data,curr);
             acceptanceProbability = Math.min(1,
                     Math.exp(logNumerator
                     -logDenominator+logModelPriorRatio));

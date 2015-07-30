@@ -45,13 +45,7 @@ public class ProposalDistributions {
         adapting[ParameterTypes.ALPHA.ordinal()] = 1;
         proposalDistributionSds[ParameterTypes.BETAS.ordinal()] = arguments.proposalDistributionSdForBetas;
         adapting[ParameterTypes.BETAS.ordinal()] = 1;
-        if (data.numberOfClusters>0) {
-            proposalDistributionSds[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()] = arguments.proposalDistributionSdForClusterIntercepts;
-            proposalDistributionSds[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()] = arguments.proposalDistributionSdForLogBetweenClusterSd;
-            adapting[ParameterTypes.CLUSTER_INTERCEPTS.ordinal()] = 1;
-            adapting[ParameterTypes.BETWEEN_CLUSTER_SD.ordinal()] = 1;            
-        }
-        if (data.numberOfUnknownBetaPriors>0) {
+        if (data.numberOfHierarchicalCovariatePriorPartitions>0) {
             proposalDistributionSds[ParameterTypes.BETA_PRIOR_SD.ordinal()] = arguments.proposalDistributionSdForBetaPriorSd;
             adapting[ParameterTypes.BETA_PRIOR_SD.ordinal()] = 1;            
         }
@@ -70,6 +64,18 @@ public class ProposalDistributions {
             adapting[ParameterTypes.GAUSSIAN_RESIDUAL.ordinal()] = 1;
             // No intercept (fixed at 0) for marginal meta-analysis methods
             adapting[ParameterTypes.ALPHA.ordinal()] = 0;
+        } else if (
+                data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()
+                ) {
+            adapting[ParameterTypes.ALPHA.ordinal()] = 0;            
+            adapting[ParameterTypes.BETAS.ordinal()] = 0;
+            if (data.modelTau==0) {
+                adapting[ParameterTypes.BETA_PRIOR_SD.ordinal()] = 0;                
+            } else if (data.modelTau==1) {
+                proposalDistributionSds[ParameterTypes.BETA_PRIOR_SD.ordinal()] 
+                        = data.tauInitialProposalSd;                
+            }
         }
         proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()] = arguments.proposalDistributionSdForAddingBeta;
         proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()] = arguments.proposalDistributionSdForSwappedInBeta;

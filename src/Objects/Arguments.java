@@ -11,9 +11,22 @@ import java.util.Scanner;
  * @author Paul J Newcombe
  */
 public class Arguments {
-    // Command line arguments -----------------------------------
-    private String pathToArgumentsFile;
+    /**
+     * Repeatedly used to read into.
+     */
     private String argumentNameInFile;
+
+    /**
+     * 
+     * Command Line Arguments. These are the arguments passed by the command
+     * line call.
+     * 
+     */
+    
+    /**
+     * Path to the Arguments file.
+     */
+    public String pathToArgumentsFile;
     /**
      * Path to a text file containing the data to analyse.
      */
@@ -35,11 +48,23 @@ public class Arguments {
      */
     public int thinningInterval;
     /**
+     * Every nth iteration to write to the results file.
+     */
+    public int consoleOutputInterval;
+    /**
      * Random number seed used in the MCMC sampling.
      */
     public int whichSeed;
     /**
-     * Number of model space prior components.
+     * Whether to use model selection (0/1).
+     */
+    public int useReversibleJump;
+    /**
+     * Whether to use alternative initial values (0/1).
+     */
+    public int useAlternativeInitialValues; // whether to use alternative initial values
+    /**
+     * Maximum number of covariates allowed.
      */
     public int maximumModelDimension;
     /**
@@ -68,20 +93,14 @@ public class Arguments {
      * Vector of Beta-Binomial hyper-parameters b for the different model space 
      * components.
      */
-    public double[] modelSpaceBetaBinomialPriorHyperparameterB;
+    public double[] modelSpaceBetaBinomialPriorHyperparameterB;   
     
-    // ARGUMENTS FILE --------------------------------------------
-    // static means each instaniation will have fixed param values
     /**
-     * Every nth iteration to write to the results file.
+     * 
+     * Initial values.
+     * 
      */
-    public int consoleOutputInterval;
-    /**
-     * Whether to store random intercepts in results file.
-     */
-    public int recordClusterIntercepts;
     
-    // Initial Values
     /**
      * Initial intercept value.
      */
@@ -96,11 +115,6 @@ public class Arguments {
      */
     public double initialBetaPriorSd; // init SD value of beta hyper prior
     /**
-     * Initial value for the between cluster SD when fitting random intercepts
-     * {@link Objects.IterationValues#logBetweenClusterSd}.
-     */
-    public double initialBetweenClusterSd; // init between-cluster SD value
-    /**
      * Initial value for the Weibull scale parameter {@link Objects.IterationValues#weibullScale}.
      */
     public double initialWeibullScale; // init Weibull scale value
@@ -108,19 +122,22 @@ public class Arguments {
      * Initial value for the Weibull scale parameter {@link Objects.IterationValues#weibullScale}.
      */
     public double initialGaussianResidual; // init Weibull scale value
+    
     /**
-     * Whether to use alternative initial values (0/1).
+     * Vector of move type probabilities with four elements corresponding to
+     * (in order) removal, addition, swap and null moves.
      */
-    public int useAlternativeInitialValues; // whether to use alternative initial values
+    public double probRemove;
+    public double probAdd;
+    public double probSwap;
+    public double probNull;
+    
     /**
-     * Whether to use model selection (0/1).
+     * 
+     * Prior distributions.
+     * 
      */
-    public int useReversibleJump; // indicates whether to use Model Prior
-    /**
-     * Whether to use a g-prior (0/1).
-     */
-    public int useGPrior; // indicates whether to use Model Prior
-    // Prior Params
+    
     /**
      * Normal prior mean for the intercept parameter
      * {@link Objects.IterationValues#alpha}.
@@ -146,63 +163,43 @@ public class Arguments {
      */
     public int betaPrecisionPriorFamily; // whether to use uniform or gamma sd prior
     /**
-     * Hyperparameter 1 of the Gamma prior on the unknown precision used for
-     * the beta's priors.
+     * Hyper-parameter 1 of the Gamma prior on the unknown precision used for
+     * the beta priors.
      */
     public double betaSigmaUniformPriorHyperparameter1;
     /**
-     * Hyperparameter 2 of the Gamma prior on the unknown precision used for
-     * the beta's priors.
+     * Hyper-parameter 2 of the Gamma prior on the unknown precision used for
+     * the beta priors.
      */
     public double betaSigmaUniformPriorHyperparameter2;
     /**
-     * Hyperparameter 1 of the Gamma prior on the unknown precision used for
-     * the beta's priors.
+     * Hyper-parameter 1 of the Gamma prior on the unknown precision used for
+     * the beta priors.
      */
     public double betaPrecisionGammaPriorHyperparameter1;
     /**
-     * Hyperparameter 2 of the Gamma prior on the unknown precision used for
-     * the beta's priors.
+     * Hyper-parameter 2 of the Gamma prior on the unknown precision used for
+     * the beta priors.
      */
     public double betaPrecisionGammaPriorHyperparameter2;
-    /**
-     * Which prior family to use for the between-cluster SD (0=uniform, 1=gamma).
-     */
-    public int betweenClusterSdPriorFamily; // whether to use uniform or gamma sd prior
-    /**
-     * Uniform prior hyper-parameter 1 for the between cluster SD.
-     */
-    public double betweenClusterPrecisionUniformPriorHyperparameter1;
-    /**
-     * Uniform prior hyper-parameter 2 for the between cluster SD.
-     */
-    public double betweenClusterPrecisionUniformPriorHyperparameter2;
-    /**
-     * Gamma prior hyper-parameter 1 for the between cluster SD.
-     */
-    public double betweenClusterPrecisionGammaPriorHyperparameter1;
-    /**
-     * Gamma prior hyper-parameter 2 for the between cluster SD.
-     */
-    public double betweenClusterPrecisionGammaPriorHyperparameter2;
     /**
      * Which prior family to use for the Gaussian residuals (0=Jeffreys, 1=Inverse Gamma).
      */
     public int gaussianResidualPriorFamily; // whether to use uniform or gamma sd prior
     /**
-     * Gamma prior hyper-parameter 1 for the between cluster SD.
+     * Uniform prior hyper-parameter 1 for Gaussian residual SD.
      */
     public double gaussianResidualUniformPriorHyperparameter1;
     /**
-     * Gamma prior hyper-parameter 2 for the between cluster SD.
+     * Uniform prior hyper-parameter 2 for Gaussian residual SD.
      */
     public double gaussianResidualUniformPriorHyperparameter2;
     /**
-     * Gamma prior hyper-parameter 1 for the between cluster SD.
+     * Gamma prior hyper-parameter 1 for Gaussian residual SD.
      */
     public double gaussianResidualPrecisionGammaPriorHyperparameter1;
     /**
-     * Gamma prior hyper-parameter 2 for the between cluster SD.
+     * Gamma prior hyper-parameter 2 for Gaussian residual SD.
      */
     public double gaussianResidualPrecisionGammaPriorHyperparameter2;
     /**
@@ -213,13 +210,13 @@ public class Arguments {
      * Hyper-parameter 2 for a Gamma prior on the Weibull scale parameter.
      */
     public double weibullScaleGammaPriorHyperparameter2;
+    
     /**
-     * Vector of move type probabilities with four elements corresponding to
-     * (in order) removal, addition, swap and null moves.
+     * 
+     * Proposal distributions.
+     * 
      */
-    public double[] moveProbabilities = new double[3]; //rem, add,
-                                                              // swap, null
-    // Proposal Sds And Parameters
+    
     /**
      * SD of the proposal distribution for the intercept 
      * {@link Objects.IterationValues#alpha}.
@@ -230,16 +227,6 @@ public class Arguments {
      * {@link Objects.IterationValues#betas}.
      */
     public double proposalDistributionSdForBetas;
-    /**
-     * SD of the proposal distribution for the cluster intercepts 
-     * {@link Objects.IterationValues#clusterIntercepts}.
-     */
-    public double proposalDistributionSdForClusterIntercepts;
-    /**
-     * SD of the proposal distribution for the between cluster SD 
-     * {@link Objects.IterationValues#logBetweenClusterSd}.
-     */
-    public double proposalDistributionSdForLogBetweenClusterSd;
     /**
      * SD of the proposal distribution for a beta upon addition to the model.
      */
@@ -264,6 +251,13 @@ public class Arguments {
      * {@link Objects.IterationValues#logGaussianResidual}.
      */
     public double proposalDistributionSdForLogGaussianResidual;
+    
+    /**
+     * 
+     * Proposal distribution adaption.
+     * 
+     */
+    
     /**
      * Every nth iteration to modify the proposal SDs, during adaption.
      */
@@ -285,22 +279,27 @@ public class Arguments {
      * @author Paul J Newcombe
      */
     public Arguments(String[] args) throws FileNotFoundException {
-        // Extract command line arguments ------------------------------
-        pathToArgumentsFile = args[0];// data file
-        pathToDataFile = args[1];// data file
-        pathToResultsFile = args[2]; // results file
-        numberOfIterations = Integer.parseInt(args[3]); // no itns
-        burnInLength = Integer.parseInt(args[4]); // no burn in itns
-        thinningInterval = Integer.parseInt(args[5]); //every 'thinningInterval'th iteration is saved
-        consoleOutputInterval = Integer.parseInt(args[6]); // how often to output progress to terminal
-        whichSeed = Integer.parseInt(args[7]); // no burn in itns
-        useReversibleJump = Integer.parseInt(args[8]); // whether to use model selection
-        useGPrior= Integer.parseInt(args[9]); // whether to use model selection
-        useAlternativeInitialValues = Integer.parseInt(args[10]); // whether to use model selection
-        maximumModelDimension = Integer.parseInt(args[11]); // Limit maximum dimension of model
-        numberOfModelSpacePriorPartitions = Integer.parseInt(args[12]); //Number of model space components
-        modelSpacePriorFamily = Integer.parseInt(args[13]); //Indicator of model space prior family
-        // up to here
+        
+        /**
+         * 
+         * Process/extract command line arguments.
+         * 
+         */
+        
+        pathToArgumentsFile = args[0];
+        pathToDataFile = args[1];
+        pathToResultsFile = args[2];
+        numberOfIterations = Integer.parseInt(args[3]);
+        burnInLength = Integer.parseInt(args[4]);
+        thinningInterval = Integer.parseInt(args[5]);
+        consoleOutputInterval = Integer.parseInt(args[6]);
+        whichSeed = Integer.parseInt(args[7]);
+        useReversibleJump = Integer.parseInt(args[8]);
+        int dummyUseGPrior= Integer.parseInt(args[9]);
+        useAlternativeInitialValues = Integer.parseInt(args[10]);
+        maximumModelDimension = Integer.parseInt(args[11]);
+        numberOfModelSpacePriorPartitions = Integer.parseInt(args[12]);
+        modelSpacePriorFamily = Integer.parseInt(args[13]);
         if (modelSpacePriorFamily==0) {
             // Poisson
             modelSpacePoissonPriorRate = new double[numberOfModelSpacePriorPartitions];
@@ -328,13 +327,20 @@ public class Arguments {
                 }
             }
         }
+        
+        /**
+         * 
+         * Read/process Arguments text file. argumentNameInFile is repeatedly
+         * re-used to read the character string labels contained in the file.
+         * 
+         */
 
-        // Arguments file --------------------------------------------
         Scanner argScan = new Scanner(new File(pathToArgumentsFile));
-        argumentNameInFile = argScan.next();
-        recordClusterIntercepts = argScan.nextInt(); // how often to output progress
 
-        // Prior Params
+        /**
+         * Prior distributions.
+         */
+        
         argumentNameInFile = argScan.next();
         alphaPriorMu = argScan.nextDouble();
         
@@ -342,7 +348,7 @@ public class Arguments {
         alphaPriorSd = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
-        betaPrecisionPriorFamily = argScan.nextInt(); // Precision prior; 0: Unif 1: Gamma
+        betaPrecisionPriorFamily = argScan.nextInt();
         
         argumentNameInFile = argScan.next();        
         betaSigmaUniformPriorHyperparameter1 = argScan.nextDouble();
@@ -357,28 +363,13 @@ public class Arguments {
         betaPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
 
         argumentNameInFile = argScan.next();        
-        betweenClusterSdPriorFamily = argScan.nextInt(); // Precision prior; 0: Unif 1: Gamma
-        
-        argumentNameInFile = argScan.next();        
-        betweenClusterPrecisionUniformPriorHyperparameter1 = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        betweenClusterPrecisionUniformPriorHyperparameter2 = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        betweenClusterPrecisionGammaPriorHyperparameter1 = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        betweenClusterPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
-
-        argumentNameInFile = argScan.next();        
         weibullScaleGammaPriorHyperparameter1 = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         weibullScaleGammaPriorHyperparameter2 = argScan.nextDouble();
 
         argumentNameInFile = argScan.next();        
-        gaussianResidualPriorFamily = argScan.nextInt(); // Precision prior; 0: Unif 1: Gamma
+        gaussianResidualPriorFamily = argScan.nextInt();
         
         argumentNameInFile = argScan.next();        
         gaussianResidualUniformPriorHyperparameter1 = argScan.nextDouble();
@@ -392,26 +383,28 @@ public class Arguments {
         argumentNameInFile = argScan.next();        
         gaussianResidualPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
         
-        // Initial Values        
-        argumentNameInFile = argScan.next();        
-        initialAlpha = argScan.nextDouble(); // init logOR values
+        /**
+         * Initial Values.
+         */
         
         argumentNameInFile = argScan.next();        
-        initialBetas = argScan.nextDouble(); // init logOR values
+        initialAlpha = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        initialBetas = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         initialBetaPriorSd = argScan.nextDouble();
 
-        argumentNameInFile = argScan.next();        
-        initialBetweenClusterSd = argScan.nextDouble();
-        
         argumentNameInFile = argScan.next();        
         initialWeibullScale = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         initialGaussianResidual = argScan.nextDouble();
         
-        // Modelling Arguments
+        /**
+         * Adaption of proposal distributions.
+         */
         
         argumentNameInFile = argScan.next();        
         adaptionBinSize = argScan.nextInt();
@@ -419,12 +412,24 @@ public class Arguments {
         argumentNameInFile = argScan.next();        
         adaptionLength = argScan.nextInt();
         
+        /**
+         * Reversible jump move probabilities.
+         */
+        
         argumentNameInFile = argScan.next();        
-        for (int j=0;j<3;j++) {
-            moveProbabilities[j] = argScan.nextDouble(); //rem, add, swap, null
-        }
+        probRemove = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        probAdd = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        probSwap = argScan.nextDouble();
+        
+        probNull = 1-(probRemove+probAdd+probSwap);
 
-        // Proposal Sds
+        /**
+         * Proposal distributions.
+         */
         
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForAlpha = argScan.nextDouble();
@@ -434,12 +439,6 @@ public class Arguments {
         
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForBetaPriorSd = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        proposalDistributionSdForClusterIntercepts = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        proposalDistributionSdForLogBetweenClusterSd = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForLogWeibullScale = argScan.nextDouble();
@@ -453,17 +452,19 @@ public class Arguments {
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForSwappedInBeta = argScan.nextDouble();
         
-        // Alternative initial values
+        /**
+         * Alternative initial values.
+         */
+        
         if (useAlternativeInitialValues==1) {
             // Initial Values
             argumentNameInFile = argScan.next();        
-            initialAlpha = argScan.nextDouble(); // init logOR values
+            initialAlpha = argScan.nextDouble();
             argumentNameInFile = argScan.next();        
-            initialBetas = argScan.nextDouble(); // init logOR values
+            initialBetas = argScan.nextDouble();
             argumentNameInFile = argScan.next();        
             initialBetaPriorSd = argScan.nextDouble();
             argumentNameInFile = argScan.next();        
-            initialBetweenClusterSd = argScan.nextDouble();
             argumentNameInFile = argScan.next();        
             initialWeibullScale = argScan.nextDouble();            
         }

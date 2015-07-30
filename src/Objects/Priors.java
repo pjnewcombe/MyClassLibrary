@@ -21,21 +21,27 @@ public class Priors {
     // Contructor method has name as class
     // NewLikeData data1 = new NewLikeData(m, sg, sa)
     public Priors(Arguments arguments, Data data) {
-        betaPrecisionGammaPrior = new GammaDist(arguments.betaPrecisionGammaPriorHyperparameter1,
-                arguments.betaPrecisionGammaPriorHyperparameter2);
-// SMMR Paper        betaPrecisionUniformPrior = new UniformDist(0,2);
+        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()) {
+            /***
+             * tau ~ InvGamma(1/2, n/2) [From P. 586 of Bottolo and Richardson, section 2.2]
+             * 
+             * so: (1/tau) ~ Gamma(1/2, 2/n)
+             * under Java Gamma parameterisation (parameterisation 2) this becomes:
+             * (1/tau) ~ Gamma(1/2, n/2)
+             * so will have 1/betaPriorSd^2 ~ Gamma(1/2, n/2)
+             */
+            betaPrecisionGammaPrior = new GammaDist(0.5,(double) (data.tau/2));            
+        } else {
+            betaPrecisionGammaPrior = new GammaDist(arguments.betaPrecisionGammaPriorHyperparameter1,
+                    arguments.betaPrecisionGammaPriorHyperparameter2);
+    // SMMR Paper        betaPrecisionUniformPrior = new UniformDist(0,2);
+        }
         betaSigmaUniformPrior = new UniformDist(
                 arguments.betaSigmaUniformPriorHyperparameter1,
                 arguments.betaSigmaUniformPriorHyperparameter2);
         gaussianResidualUniformPrior = new UniformDist(
                 arguments.gaussianResidualUniformPriorHyperparameter1,
                 arguments.gaussianResidualUniformPriorHyperparameter2);
-        betweenClusterPrecisionUniformPrior = new UniformDist(
-                arguments.betweenClusterPrecisionUniformPriorHyperparameter1,
-                arguments.betweenClusterPrecisionUniformPriorHyperparameter2);
-        betweenClusterPrecisionGammaPrior = new GammaDist(
-                arguments.betweenClusterPrecisionGammaPriorHyperparameter1,
-                arguments.betweenClusterPrecisionGammaPriorHyperparameter2);
         weibullScalePrior = new GammaDist(arguments.weibullScaleGammaPriorHyperparameter1,
                 arguments.weibullScaleGammaPriorHyperparameter2);
         gaussianResidualPrecisionPrior = new GammaDist(
@@ -43,10 +49,7 @@ public class Priors {
                 arguments.gaussianResidualPrecisionGammaPriorHyperparameter2);
         if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
             scaledChiSquareGaussianResidualPrecisionPrior = new GammaDist(
-                    (data.gaussianResidualVarianceEstimateN/2),
-                    data.gaussianResidualVarianceEstimateN/
-                            (2*data.gaussianResidualVarianceEstimate)
-            );            
+                    data.sigma2_invGamma_a, data.sigma2_invGamma_b);            
         }
     }
 

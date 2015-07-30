@@ -9,6 +9,51 @@ import java.util.Random;
  */
 public class GeneralMethods {    
     /**
+     * Chooses a Reversible Jump move type when using the conjugate model.
+     * 
+     * @param probRemove Probability of removing a covariate
+     * @param probAdd Probability of adding a covariate
+     * @param probSwap Probability of swapping two covariates
+     * @param randomDraws Random number generator object.
+     * 
+     * @return Indicates chosen move type (0=Removal, 1=Addition, 2=Swap, 3=Null)
+     */
+    public static int chooseMove(
+            double probRemove,
+            double probAdd,
+            double probSwap,
+            Random randomDraws) {
+        int whichMove;
+        double eventDraw = randomDraws.nextFloat();
+        
+        /**
+         * 
+         * Must be one of the below.
+         * 
+         */
+        
+        /**
+         * Null move.
+         */
+        if (eventDraw>=(probRemove+probAdd+probSwap)) {whichMove =3;}
+        /**
+         * Swap move.
+         */
+        else if (eventDraw>=(probRemove+probAdd)) {whichMove = 2;} // Never assesed if this number is bigger than 2
+        /**
+         * Add move.
+         */
+        else if (eventDraw>=probRemove) {whichMove = 1;}
+        /**
+         * Remove move.
+         */
+        else {whichMove=0;}
+        
+        return whichMove;          
+        
+    }
+    
+    /**
      * Chooses a Reversible Jump move type.
      * 
      * @param M Total number of variables.
@@ -19,7 +64,7 @@ public class GeneralMethods {
      * 
      * @return Indicates chosen move type (0=Removal, 1=Addition, 2=Swap, 3=Null)
      */
-    public static int chooseMove(
+    public static int chooseMove_OLD(
             int M,
             int maxAllowedMarkers,
             int presentMarkN,
@@ -28,7 +73,7 @@ public class GeneralMethods {
         int whichMove;
         double eventDraw = randomDraws.nextFloat();
         if (eventDraw>=moveProbabilities[2]) {whichMove =3;}
-        else if (eventDraw>=moveProbabilities[1]) {whichMove = 2;}
+        else if (eventDraw>=moveProbabilities[1]) {whichMove = 2;} // Never assesed if this number is bigger than 2
         else if (eventDraw>=moveProbabilities[0]) {whichMove = 1;}
         else {whichMove =0;}
 
@@ -159,6 +204,29 @@ public class GeneralMethods {
           return noPresentMarkers;
         }
 
+    /***
+     * Gets the number of covariates included in a `model' described by
+     * a vector of 0's and 1's.
+     * 
+     * @param modelDimension Total number of included covariates.
+     * @param model A vector of 0's and 1's indicating which covariates are present
+     * 
+     * @return The number of included variables. 
+     */     
+      public static int[] getVarIndices(int modelDimension, int[] model) {
+          int[] varIndices = new int[modelDimension];
+          int enteredVars = 0;
+          int var=0;
+          while (enteredVars < modelDimension) {
+              if (model[var]==1) {
+                  varIndices[enteredVars]=var;
+                  enteredVars++;
+              }
+              var++;
+          }
+          return varIndices;
+      }
+      
     /**
      * Counts the number of covariates included in a `model' described by
      * a vector of 0's and 1's, by each different model space component.

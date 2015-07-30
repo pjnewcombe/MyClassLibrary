@@ -11,6 +11,7 @@ public enum LikelihoodTypes {
     // 1: Weibull
     // 2: Gaussian
     // 3: Marginal statistics from a Gaussian
-    LOGISTIC, WEIBULL, GAUSSIAN, GAUSSIAN_MARGINAL;
+    LOGISTIC, WEIBULL, GAUSSIAN, GAUSSIAN_CONJ,
+    GAUSSIAN_MARGINAL, GAUSSIAN_MARGINAL_CONJ;
     
 }

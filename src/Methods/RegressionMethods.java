@@ -45,16 +45,8 @@ public class RegressionMethods {
             for (int v=0; v<data.totalNumberOfCovariates; v++) {
                 buffer.write(curr.betas.get(v, 0) +" ");
             }
-            for (int c=0; c<data.numberOfUnknownBetaPriors; c++) {
-                buffer.write(curr.logBetaPriorSd[c] +" ");   // between study var                
-            }
-            if (data.numberOfClusters > 0) {
-                buffer.write(curr.logBetweenClusterSd +" ");   // between study var
-                if (arguments.recordClusterIntercepts == 1) {
-                    for (int r=0; r<data.numberOfClusters; r++) {
-                        buffer.write(curr.clusterIntercepts[r]+" ");
-                    }
-                }
+            for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
+                buffer.write(curr.logBetaPriorSds[c] +" ");   // between study var                
             }
             buffer.write(curr.logLikelihood+" ");   // log-Likelihood
 
