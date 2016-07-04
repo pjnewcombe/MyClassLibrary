@@ -1,5 +1,6 @@
 package Methods;
 
+import Jama.Matrix;
 import java.util.Random;
 
 /**
@@ -139,10 +140,64 @@ public class GeneralMethods {
       return logModelPriorRatio ;
     }  
 
+//  /**
+//   * OLD AND INCORRECT!!
+//   * Calculates the log-ratio of prior support for two models, under a
+//   * Beta-Binomial prior on model dimension (to be used in the
+//   * calculation of the acceptance probability).
+//   * 
+//   * @param nVarsCurr Number of variables selected in the current model
+//   * @param nVarsProp Number of variables selected in the proposed model
+//   * @param modSpaceSize Total number of covariates
+//   * @param modPriBetaBinA Beta-Binomial prior hyper-parameter a
+//   * @param modPriBetaBinB Beta-Binomial prior hyper-parameter b
+//   * @return Log-ratio of the prior support for both models.
+//   */
+//  public static double logModelPriorRatioBetaBin_OLD(
+//          int nVarsCurr,
+//          int nVarsProp,
+//          int modSpaceSize,
+//          double modPriBetaBinA,
+//          double modPriBetaBinB) {
+//      // BetaBinomial for proposal is:
+//      // Beta(nVarsCurr+modPriBetaA, modSpaceSize-nVarsCurr+modPriBetaB)
+//      // = (nVarsCurr+modPriBetaA-1)!(modSpaceSize-nVarsCurr+modPriBetaB-1)!
+//      //    /(modSpaceSize+modPriBetaA+modPriBetaB-1)!
+//      // Can take advantage of cancelling factorials
+//      //
+//      // Numerator - corresponds to proposed likelihood/prior
+//      // Denominator - corresponds to curren likelihood/prior
+//      double logModelPriorRatio = 0;
+//      // Work out difference in model size between iterations to take advantage
+//      // of cancelling factorials
+//      int sizeDiff = nVarsProp-nVarsCurr;
+//      if (sizeDiff==1) {
+//          // addition
+//          //(nVarsProp+modPriBetaA-1)
+//          // / (modSpaceSize-nVarsCurr+modPriBetaB-1)
+//          logModelPriorRatio =
+//                  Math.log((nVarsProp+modPriBetaBinA-1))
+//                  -Math.log((modSpaceSize-nVarsCurr+modPriBetaBinB-1));
+//      } else if (sizeDiff==-1) {
+//          // removal
+//          //(modSpaceSize-nVarsProp+modPriBetaB-1)
+//          // / (nVarsCurr+modPriBetaA-1)
+//          logModelPriorRatio =
+//                  Math.log((modSpaceSize-nVarsProp+modPriBetaBinB-1))
+//                  -Math.log((nVarsCurr+modPriBetaBinA-1));
+//      }
+//      return logModelPriorRatio ;
+//    }  
+
   /**
    * Calculates the log-ratio of prior support for two models, under a
    * Beta-Binomial prior on model dimension (to be used in the
-   * calculation of the acceptance probability).
+   * calculation of the acceptance probability), using the density defined in
+   * Bottolo (6) ESS 2010 paper
+   * 
+   * This density is designed to be used when specifying a mean and variance
+   * for the number of effects. In practice I found we can not make this
+   * varianece small.
    * 
    * @param nVarsCurr Number of variables selected in the current model
    * @param nVarsProp Number of variables selected in the proposed model
@@ -151,41 +206,86 @@ public class GeneralMethods {
    * @param modPriBetaBinB Beta-Binomial prior hyper-parameter b
    * @return Log-ratio of the prior support for both models.
    */
-  public static double logModelPriorRatioBetaBin(
+  public static double OLD_logModelPriorRatioBetaBin_THIS_IS_WRONG(
           int nVarsCurr,
           int nVarsProp,
           int modSpaceSize,
           double modPriBetaBinA,
           double modPriBetaBinB) {
-      // BetaBinomial for proposal is:
-      // Beta(nVarsCurr+modPriBetaA, modSpaceSize-nVarsCurr+modPriBetaB)
-      // = (nVarsCurr+modPriBetaA-1)!(modSpaceSize-nVarsCurr+modPriBetaB-1)!
-      //    /(modSpaceSize+modPriBetaA+modPriBetaB-1)!
-      // Can take advantage of cancelling factorials
-      //
-      // Numerator - corresponds to proposed likelihood/prior
-      // Denominator - corresponds to curren likelihood/prior
+      
       double logModelPriorRatio = 0;
       // Work out difference in model size between iterations to take advantage
       // of cancelling factorials
       int sizeDiff = nVarsProp-nVarsCurr;
       if (sizeDiff==1) {
-          // addition
-          //(nVarsProp+modPriBetaA-1)
-          // / (modSpaceSize-nVarsCurr+modPriBetaB-1)
+          // Log-ratio of beta-bimoial coefficients
           logModelPriorRatio =
-                  Math.log((nVarsProp+modPriBetaBinA-1))
-                  -Math.log((modSpaceSize-nVarsCurr+modPriBetaBinB-1));
+                  Math.log(modSpaceSize + 1 - nVarsProp)
+                  -Math.log(nVarsProp);
+          // Log-ratio of Beta distibutions
+          logModelPriorRatio = logModelPriorRatio                  
+                  +Math.log(nVarsProp + modPriBetaBinA - 1)
+                  -Math.log(modSpaceSize - nVarsCurr + modPriBetaBinB);
       } else if (sizeDiff==-1) {
-          // removal
-          //(modSpaceSize-nVarsProp+modPriBetaB-1)
-          // / (nVarsCurr+modPriBetaA-1)
+          // Log-ratio of beta-bimoial coefficients
           logModelPriorRatio =
-                  Math.log((modSpaceSize-nVarsProp+modPriBetaBinB-1))
-                  -Math.log((nVarsCurr+modPriBetaBinA-1));
+                  Math.log(nVarsCurr)
+                  -Math.log(modSpaceSize + 1 - nVarsCurr);
+          // Log-ratio of Beta distibutions
+          logModelPriorRatio = logModelPriorRatio                  
+                  -Math.log(nVarsCurr + modPriBetaBinA - 1)
+                  +Math.log(modSpaceSize - nVarsProp + modPriBetaBinB);
       }
       return logModelPriorRatio ;
-    }  
+    }
+
+  /**
+   * Calculates the log-ratio of prior support for two model sizes, using the 
+   * density given in Bottolo et al, 2010 eq (6). The density defined by
+   * bottolo et al is the prior probability for a specific model. This is defined
+   * in terms of the dimension of the model p_gamma:
+   * 
+   * P(gamma) = Beta(p_gamma + a, P - p_gamma + b)/ Beta(a,b)
+   * P(gamma_prop)/p(gamma_curr) = 
+   *    Beta(p_gamma_prop + a, P - p_gamma_prop + b)/ Beta(p_gamma_curr + a, P - p_gamma_curr + b)
+   * 
+   * The Beta(a,b) terms cancel when defining the ratios of these probabilities.
+   * Note that:
+   * 
+   * Beta(x,y) = (x-1)!(y-1)!/(x+y-1)!
+   * 
+   * I worked through this - see PDF.
+   * 
+   * @param nVarsCurr Number of variables selected in the current model
+   * @param nVarsProp Number of variables selected in the proposed model
+   * @param modSpaceSize Total number of covariates
+   * @param modPriBetaBinA Beta-Binomial prior hyper-parameter a
+   * @param modPriBetaBinB Beta-Binomial prior hyper-parameter b
+   * @return Log-ratio of the prior support for both models.
+   */
+  public static double logModelPriorRatioBetaBin_Bottolo_SpecificModels(
+          int nVarsCurr,
+          int nVarsProp,
+          int modSpaceSize,
+          double modPriBetaBinA,
+          double modPriBetaBinB) {
+      
+      double logModelPriorRatio = 0;
+      // Work out difference in model size between iterations to take advantage
+      // of cancelling factorials
+      int sizeDiff = nVarsProp-nVarsCurr;
+      if (sizeDiff==1) {
+          // Log-ratio of beta-binomial coefficients
+          logModelPriorRatio =
+                  Math.log(nVarsCurr + modPriBetaBinA)
+                  -Math.log(modSpaceSize - nVarsCurr + modPriBetaBinB - 1);
+      } else if (sizeDiff==-1) {
+          logModelPriorRatio =
+                  Math.log(modSpaceSize - nVarsCurr + modPriBetaBinB)
+                  -Math.log(nVarsCurr + modPriBetaBinA - 1);
+      }
+      return logModelPriorRatio ;
+    }
   
     /***
      * Counts the number of covariates included in a `model' described by
@@ -203,7 +303,98 @@ public class GeneralMethods {
           }
           return noPresentMarkers;
         }
+      
+    /***
+     * Counts the number of covariates included in a `model' described by
+     * a vector of 0's and 1's.
+     * 
+     * @param betas A vector of betas stored in a Jama Matrix object.
+     * @param model A vector of 0's and 1's indicating which covariates are present
+     * 
+     * @return The number of included variables. 
+     */     
+      public static Matrix normaliseAbsoluteBetasToSumToOne(Matrix betas, int[] model) {
+          // Calculate the normalising absolute total
+          double sumOfAbsoluteValues = 0;
+          for (int m=0; m<model.length; m++ ) {
+              if (model[m]==1) {
+                  sumOfAbsoluteValues += betas.get(m, 0)*Math.signum(betas.get(m, 0));}
+          }
+          // Divide through by the normalising total
+          for (int m=0; m<model.length; m++ ) {
+              if (model[m]==1) {
+                  betas.set(m, 0, betas.get(m, 0)/sumOfAbsoluteValues);
+              }
+          }
+          // Return
+          return betas;
+        }      
 
+    /***
+     * Converts the betas (log-scale for updating) to exponentiated weights,
+     * whose absolute values sum to one, but for which the signs are preserved
+     * 
+     * @param betas A vector of betas stored in a Jama Matrix object.
+     * @param model A vector of 0's and 1's indicating which covariates are present
+     * 
+     * @return A vector of weights in a Matrix object with absolute values 
+     * summing to one. 
+     */     
+      public static Matrix EXTRA_betasToNormalisedWeights(Matrix betas, int[] model) {
+          //Exponentiate while maintinaing the signs
+          for (int m=0; m<model.length; m++ ) {
+              if (model[m]==1) {
+                  betas.set(m, 0, 
+                          Math.signum(betas.get(m, 0))*
+                                  Math.exp(Math.abs(betas.get(m, 0))) );
+              }
+          }
+                System.out.println("betasExp "+betas.get(1,0));
+          
+          // Calculate the normalising constant - the sum of the absolute values
+          double sumOfAbsoluteValues = 0;
+          for (int m=0; m<model.length; m++ ) {
+              if (model[m]==1) {
+                  sumOfAbsoluteValues += Math.abs(betas.get(m, 0));}
+          }
+          
+          // Divide through by the normalising constant
+          for (int m=0; m<model.length; m++ ) {
+              if (model[m]==1) {
+                  betas.set(m, 0, betas.get(m, 0)/sumOfAbsoluteValues);
+              }
+          }
+
+                System.out.println("betasNorm "+betas.get(1,0));
+
+          
+          // Return
+          return betas;
+        }      
+
+    /***
+     * Converts the normalised weights back to betas on the log-scale, while
+     * preserving signs.
+     * 
+     * @param betas A vector of normalised weights stored in a Jama Matrix object.
+     * @param model A vector of 0's and 1's indicating which covariates are present
+     * 
+     * @return A vector of betas on the log-scale
+     */     
+      public static Matrix EXTRA_normalisedWeightsToLogBetas(Matrix betas, int[] model) {
+          //Take logs while maintinaing the signs
+          for (int m=0; m<model.length; m++ ) {
+              if (model[m]==1) {
+                  betas.set(m, 0, 
+                          Math.signum(betas.get(m, 0))*
+                                  Math.log(Math.abs(betas.get(m, 0))) );
+              }
+          }
+          
+          // Return
+          return betas;
+        }      
+      
     /***
      * Gets the number of covariates included in a `model' described by
      * a vector of 0's and 1's.

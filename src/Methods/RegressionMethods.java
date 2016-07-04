@@ -37,12 +37,18 @@ public class RegressionMethods {
             // Write values
             if (data.whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()) {
                 buffer.write(curr.logWeibullScale +" ");   // Weibull k                                
+            } else if (data.whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()) {
+                buffer.write(curr.dirichletConcentration +" ");   // Weibull k                                
+                buffer.write(curr.auc +" ");   // Weibull k                                
+            } else if (data.whichLikelihoodType==LikelihoodTypes.ROCAUC_ANCHOR.ordinal()) {
+                buffer.write(curr.auc +" ");   // Weibull k                                
             } else if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
-                    data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+                    data.whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()) {
                 buffer.write(curr.logGaussianResidual +" ");   // Gaussian residual                
             }
             buffer.write(curr.alpha+" ");
             for (int v=0; v<data.totalNumberOfCovariates; v++) {
+                //System.out.println("TEST");
                 buffer.write(curr.betas.get(v, 0) +" ");
             }
             for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
