@@ -44,6 +44,20 @@ public class Data {
      */
     public int[] binaryOutcomes;
     /**
+     * Quantities required for the ROC AUC calculation
+     */
+    public int nCases;
+    public int nControls;
+    public double prevalence;
+    public double aucMultiplier;
+    public double rocXunit;
+    public double rocYunit;
+    public double maxFprOrXval;
+    public int lastXtickNumberForTruncatedRoc;
+    public double minSensitivityOrYval;
+    public double minAuc;
+    public double maxAuc;
+    /**
      * Vector of continuous binaryOutcomes for each individual.
      */
     public Matrix Y;
@@ -51,6 +65,21 @@ public class Data {
      * Vector of survival survivalTimes for each individual (if it is survival data).
      */
     public double[] survivalTimes;    
+    /**
+     * Vector of sub-cohort membership for each individual (if case-cohort data).
+     */
+    public int[] subcohort;
+    public double barlowMultiplier;
+    public double casecohortPseudoLikelihoodMultiplier;
+    /*
+    * Initial parameter values.
+    */
+    public int inits_provided;
+    public double init_alpha;
+    public double[] init_betas;
+    public double[] init_betaPriorSds;
+    public double init_weibullScale;
+    public double init_gaussianResidual;
     
     /**
      * 
@@ -149,6 +178,10 @@ public class Data {
      * Vector of normal prior SDs for the different betas.
      */
     public double[] betaPriorSds;         // Vector of prior SDs
+    /**
+     * Vector of Dirichlet Alphas for the ROCAUC likelihood.
+     */
+    public double[] priorDirichletWeights;         // Vector of prior means
     
     /**
      * 
@@ -181,14 +214,6 @@ public class Data {
      */
     
     /**
-     * Residual variance inverse-gamma hyper-parameter 1.
-     */
-    public double sigma2_invGamma_a;
-    /**
-     * Residual variance inverse-gamma hyper-parameter 1.
-     */
-    public double sigma2_invGamma_b;
-    /**
      * Under the conjugate model: Whether to use a g-prior (1) or independent
      * priors (0).
      */
@@ -203,16 +228,10 @@ public class Data {
      */
     public int modelTau;
     /**
-     * Under the conjugate model: Initial proposal SD for adapting tau 
-     * proposals. This can be specified since is very different to the normal
-     * use of betaPriorSd.
-     */
-    public double tauInitialProposalSd;
-    /**
      * Under the conjugate model: Whether or not to write the posterior scores
      * for all single SNP models at the top of the results file.
      */
-    public int allModelScoresUpToDim;
+    public int enumerateUpToDim;
     
     /**
      * 
@@ -263,6 +282,12 @@ public class Data {
         if (likelihoodFamily.equals("Logistic")) {
             nExtraParametersBeyondLinPred=0;
             whichLikelihoodType=LikelihoodTypes.LOGISTIC.ordinal();
+        } else if (likelihoodFamily.equals("RocAUC")) {
+            nExtraParametersBeyondLinPred=1; // For beta prior SD
+            whichLikelihoodType=LikelihoodTypes.ROCAUC.ordinal();
+        } else if (likelihoodFamily.equals("RocAUC_Anchoring")) {
+            nExtraParametersBeyondLinPred=0;
+            whichLikelihoodType=LikelihoodTypes.ROCAUC_ANCHOR.ordinal();
         } else if (likelihoodFamily.equals("Weibull")) {
             nExtraParametersBeyondLinPred=1;
             whichLikelihoodType=LikelihoodTypes.WEIBULL.ordinal();
@@ -272,12 +297,21 @@ public class Data {
         } else if (likelihoodFamily.equals("GaussianConj")) {
             nExtraParametersBeyondLinPred=1;
             whichLikelihoodType=LikelihoodTypes.GAUSSIAN_CONJ.ordinal();
-        } else if (likelihoodFamily.equals("GaussianMarg")) {
+        } else if (likelihoodFamily.equals("JAM_MCMC")) {
             nExtraParametersBeyondLinPred=1;
-            whichLikelihoodType=LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal();
-        } else if (likelihoodFamily.equals("GaussianMargConj")) {
+            whichLikelihoodType=LikelihoodTypes.JAM_MCMC.ordinal();
+        } else if (likelihoodFamily.equals("JAM")) {
             nExtraParametersBeyondLinPred=1;
-            whichLikelihoodType=LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal();            
+            whichLikelihoodType=LikelihoodTypes.JAM.ordinal();            
+        } else if (likelihoodFamily.equals("Cox")) {
+            nExtraParametersBeyondLinPred=0;
+            whichLikelihoodType=LikelihoodTypes.COX.ordinal();            
+        } else if (likelihoodFamily.equals("CaseCohort_Prentice")) {
+            nExtraParametersBeyondLinPred=0;
+            whichLikelihoodType=LikelihoodTypes.CASECOHORT_PRENTICE.ordinal();            
+        } else if (likelihoodFamily.equals("CaseCohort_Barlow")) {
+            nExtraParametersBeyondLinPred=0;
+            whichLikelihoodType=LikelihoodTypes.CASECOHORT_BARLOW.ordinal();            
         }
         totalNumberOfCovariates = dataScan.nextInt();             // no. variables (including interaction terms)
         covariateNames = new String[totalNumberOfCovariates];
@@ -336,43 +370,23 @@ public class Data {
          */
         
         /**
-         * Residual prior info for all Gaussian models.
-         */
-        if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()
-                ) {
-            /**
-             * Gamma prior parameters for the residual variance. Calculate the
-             * hyper-parameters of an informative inverse gamma of an
-             * informative inverse gamma using the inverse-gamma/inverse-chi
-             * squared equivalence. Note that java uses parameterisation 2 for
-             * gammas
-             */
-            sigma2_invGamma_a = dataScan.nextDouble();
-            sigma2_invGamma_b = dataScan.nextDouble();            
-        }
-        
-        /**
          * Modeling options for conjugate Gaussian models.
          */
         if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()
+                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()
                 ) {
             useGPrior = dataScan.nextInt();
             tau = dataScan.nextDouble();
             modelTau = dataScan.nextInt();
-            tauInitialProposalSd = dataScan.nextDouble();
-            allModelScoresUpToDim = dataScan.nextInt();            
+            enumerateUpToDim = dataScan.nextInt();            
         }
         
         
         /**
          * Read in covariate information. Very different for marginal models.
          */
-        if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()) {
+        if (whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
             /**
              * Read in block information.
              */
@@ -432,7 +446,7 @@ public class Data {
              * iteration.
              */
             XtX = (X.transpose()).times(X);            
-        } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+        } else if (whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()) {
             /**
              * Calculate inverse of X'X for each block. These are repeatedly
              * re-used.
@@ -444,7 +458,7 @@ public class Data {
                 System.out.println("  block "+(b+1)+"/"+nBlocks+" inverted");
             }
             System.out.println("...inverse calculated");   
-        } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()) {
+        } else if (whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
             /**
              * Calculate X'X for each block. Can use sub-matrices each
              * iteration.
@@ -462,8 +476,13 @@ public class Data {
          */
         
         binaryOutcomes = new int[numberOfIndividuals];
-        if (whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.LOGISTIC.ordinal()) {
+        if (whichLikelihoodType==LikelihoodTypes.LOGISTIC.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.COX.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.CASECOHORT_PRENTICE.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.CASECOHORT_BARLOW.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.ROCAUC_ANCHOR.ordinal()) {
             for (int i=0; i<numberOfIndividuals; i++) {
                 binaryOutcomes[i]  = dataScan.nextInt();
             }
@@ -476,14 +495,28 @@ public class Data {
                     survivalTimes[i] = dataScan.nextDouble();
                 }
             }            
+            /**
+             * Read in sub-cohort membership, if Case-Cohort model.
+             */
+            if (whichLikelihoodType==LikelihoodTypes.CASECOHORT_PRENTICE.ordinal()|
+                    whichLikelihoodType==LikelihoodTypes.CASECOHORT_BARLOW.ordinal()) {
+                subcohort = new int[numberOfIndividuals];
+                for (int i=0; i<numberOfIndividuals; i++) {
+                    subcohort[i] = dataScan.nextInt();
+                }
+                casecohortPseudoLikelihoodMultiplier = dataScan.nextDouble();
+            }
+            if (whichLikelihoodType==LikelihoodTypes.CASECOHORT_BARLOW.ordinal()) {
+                barlowMultiplier = (double)(1/dataScan.nextDouble()); // Recprical of subcohort sampling fraction
+            }
         } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN.ordinal()|
                 whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
             Y = new Matrix(numberOfIndividuals,1);
             for (int i=0; i<numberOfIndividuals; i++) {
                 Y.set(i, 0, dataScan.nextDouble());
             }
-        } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()) {
+        } else if (whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
             Y = new Matrix(totalNumberOfCovariates,1);
             for (int i=0; i<totalNumberOfCovariates; i++) {
                 Y.set(i, 0, dataScan.nextDouble());
@@ -502,7 +535,7 @@ public class Data {
              * the likelihood calculation.
              */
             YtY = ((Y.transpose()).times(Y)).get(0,0);
-        } else if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()) {
+        } else if (whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
             /**
              * Calculate (L^-1t)'(L^-1t) for each block. Repeatedly used in
              * the likelihood calculation.
@@ -517,7 +550,62 @@ public class Data {
                 YtY_Blocks[b] = (Y_Blocks[b].transpose().times(
                                 Y_Blocks[b])).get(0, 0);
             }
-        }        
+        } else if (whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.ROCAUC_ANCHOR.ordinal()) {
+            /**
+             * Read in maximum acceptable FPR or minimum acceptable sensitvity.
+             */
+            maxFprOrXval = dataScan.nextDouble();
+            minSensitivityOrYval = dataScan.nextDouble();
+            
+            /**
+             * Set quantities for the AUC calculation.
+             */
+            // Calculate number of controls and cases; required for axis units
+            nControls = 0;
+            nCases = 0;
+            for (int i=0; i<numberOfIndividuals; i++) {
+                if (binaryOutcomes[i]==1) {
+                    nCases = nCases + 1;
+                } else if (binaryOutcomes[i]==0) {
+                    nControls = nControls + 1;                    
+                }
+            }
+            // Calculate X and Y tick units
+            rocXunit = (double) 1/nControls; // X-axis is specificity; determined by controls
+            rocYunit = (double) 1/nCases; // Y-axis is sensitivity; determined by cases  
+            // For a truncated ROC curve calculate final X-tick as f(no. controls)
+            lastXtickNumberForTruncatedRoc = (int) Math.round(maxFprOrXval*nControls); // Final control on truncated axis
+            // If truncating by sensitivity, i.e. y-axis, it is better to
+            // invert the curve, and use the same x-axis truncating code
+            if (minSensitivityOrYval > 0) {
+                // Re-calculate the X and Y tick units for the inverted
+                // ROC curve
+                rocXunit = (double) 1/nCases; 
+                rocYunit = (double) 1/nControls; 
+                // Flip the disease coding
+                for (int i = 0; i<numberOfIndividuals; i++) {
+                    binaryOutcomes[i] = 1 - binaryOutcomes[i];
+                }
+                // Set the X-trunctation point for the inverted ROC curve
+                maxFprOrXval = 1 - minSensitivityOrYval;
+                lastXtickNumberForTruncatedRoc = (int) Math.round(maxFprOrXval*nCases); // Final control on truncated axis
+            }
+            
+            /**
+             * Calculate weighting for the ROC relative to the prior.
+             */
+            prevalence = (double) nCases / numberOfIndividuals;
+            if (maxFprOrXval < 1) {
+                minAuc = (maxFprOrXval*maxFprOrXval)/2;
+                maxAuc = maxFprOrXval;
+            } else {
+                minAuc = 0.5;
+                maxAuc = 1;
+            }
+            aucMultiplier = (double) (arguments.aucMultiplierWeight/(maxAuc-minAuc))*(nCases*Math.log(prevalence)+nControls*Math.log(1-prevalence));
+            //NEW: for logging the AUC: aucMultiplier = (double) arguments.aucMultiplierWeight * (nCases*Math.log(prevalence)+nControls*Math.log(1-prevalence))/Math.log(0.5);
+        }
         
         
         /**
@@ -525,14 +613,21 @@ public class Data {
          * Read in information regarding the prior setup.
          * 
          */
+        if (whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()) {
+            priorDirichletWeights = new double[totalNumberOfCovariates];
+            for (int v=0; v<totalNumberOfCovariates; v++) {
+                priorDirichletWeights[v]  = dataScan.nextDouble();
+            }
+        } else {
+            numberOfCovariatesWithInformativePriors = dataScan.nextInt();  // Number of variables from the beginning
+            betaPriorMus = new double[totalNumberOfCovariates];
+            betaPriorSds = new double[totalNumberOfCovariates];
+            for (int v=0; v<numberOfCovariatesWithInformativePriors; v++) {
+                betaPriorMus[v]  = dataScan.nextDouble();
+                betaPriorSds[v]  = dataScan.nextDouble();
+            }
+        }
         
-        betaPriorMus = new double[totalNumberOfCovariates];
-        betaPriorSds = new double[totalNumberOfCovariates];
-        numberOfCovariatesWithInformativePriors = dataScan.nextInt();  // Number of variables from the beginning
-        for (int v=0; v<numberOfCovariatesWithInformativePriors; v++) {
-            betaPriorMus[v]  = dataScan.nextDouble();
-            betaPriorSds[v]  = dataScan.nextDouble();
-        }            
         numberOfHierarchicalCovariatePriorPartitions = dataScan.nextInt();  // Could be 0
         if (numberOfHierarchicalCovariatePriorPartitions>0) {
             numberOfHierarchicalCovariatePriorPartitions=1; // FORCE TO 1 FOR NOW
@@ -583,7 +678,15 @@ public class Data {
         System.out.println("------------");
         System.out.println("Data read from "+arguments.pathToDataFile);
         System.out.println("Likelihood: "+likelihoodFamily);
-        if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()|
+        if (whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.ROCAUC_ANCHOR.ordinal()) {
+            if (minSensitivityOrYval>0) {
+                System.out.println("Truncated to minimum sensitivity "+minSensitivityOrYval);                                
+            } else {
+                System.out.println("Truncated to maximum FPR "+maxFprOrXval);                
+            }
+        }
+        if (whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
                 whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
             if (useGPrior==1) {
                 System.out.println("G-prior in use.");

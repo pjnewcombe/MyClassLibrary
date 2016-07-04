@@ -35,7 +35,7 @@ public class ProposalDistributions {
     // Contructor method has name as class
     // NewLikeData data1 = new NewLikeData(m, sg, sa)
     public ProposalDistributions(Arguments arguments, Data data) {
-        numberOfProposalDistributions = 9; // Must be of length equal to ParameterTypes - does not matter if some elements are redundant
+        numberOfProposalDistributions = 10; // Must be of length equal to ParameterTypes - does not matter if some elements are redundant
         acceptanceRateNumerators = new int[numberOfProposalDistributions];
         acceptanceRateDenominators = new int[numberOfProposalDistributions];
         acceptanceRates = new double[numberOfProposalDistributions];
@@ -59,13 +59,13 @@ public class ProposalDistributions {
             // Also set something bigger for alpha
             proposalDistributionSds[ParameterTypes.ALPHA.ordinal()] = 1;
         }
-        if (data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL.ordinal()) {
+        if (data.whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()) {
             proposalDistributionSds[ParameterTypes.GAUSSIAN_RESIDUAL.ordinal()] = arguments.proposalDistributionSdForLogGaussianResidual;
             adapting[ParameterTypes.GAUSSIAN_RESIDUAL.ordinal()] = 1;
             // No intercept (fixed at 0) for marginal meta-analysis methods
             adapting[ParameterTypes.ALPHA.ordinal()] = 0;
         } else if (
-                data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_MARGINAL_CONJ.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
                 data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()
                 ) {
             adapting[ParameterTypes.ALPHA.ordinal()] = 0;            
@@ -74,8 +74,20 @@ public class ProposalDistributions {
                 adapting[ParameterTypes.BETA_PRIOR_SD.ordinal()] = 0;                
             } else if (data.modelTau==1) {
                 proposalDistributionSds[ParameterTypes.BETA_PRIOR_SD.ordinal()] 
-                        = data.tauInitialProposalSd;                
+                        = arguments.proposalDistributionSdForTau;                
             }
+        } else if (
+                data.whichLikelihoodType==LikelihoodTypes.COX.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.CASECOHORT_BARLOW.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.CASECOHORT_PRENTICE.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.ROCAUC_ANCHOR.ordinal()) {
+            adapting[ParameterTypes.ALPHA.ordinal()] = 0; // No intercept
+        } else if (
+                data.whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()
+                ) {
+            adapting[ParameterTypes.ALPHA.ordinal()] = 0; // No intercept
+            proposalDistributionSds[ParameterTypes.DIRICHLET_CONCENTRATION.ordinal()] = arguments.proposalDistributionSdForDirichletConcentration;
+            adapting[ParameterTypes.DIRICHLET_CONCENTRATION.ordinal()] = 1; // Use for the Dirichlet concentration parameter alpha
         }
         proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()] = arguments.proposalDistributionSdForAddingBeta;
         proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()] = arguments.proposalDistributionSdForSwappedInBeta;
@@ -86,7 +98,6 @@ public class ProposalDistributions {
     public void adapt(Data data, IterationValues Its, int i) {
         if (i<adaptionLength) {
             for (int j=0; j<numberOfProposalDistributions; j++) {
-//                if (adapting[j]==1&ParameterTypes.BETAS.ordinal()!=j) { ///////////////////////////
                 if (adapting[j]==1) { ///////////////////////////
                     // NOTE: Order of following steps must remain for same results
                     // Reset numerator and denominator at end of bin

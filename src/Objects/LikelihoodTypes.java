@@ -12,6 +12,7 @@ public enum LikelihoodTypes {
     // 2: Gaussian
     // 3: Marginal statistics from a Gaussian
     LOGISTIC, WEIBULL, GAUSSIAN, GAUSSIAN_CONJ,
-    GAUSSIAN_MARGINAL, GAUSSIAN_MARGINAL_CONJ;
+    JAM_MCMC, JAM, ROCAUC, ROCAUC_ANCHOR, COX,
+    CASECOHORT_PRENTICE, CASECOHORT_BARLOW;
     
 }

@@ -119,6 +119,10 @@ public class Arguments {
      */
     public double initialWeibullScale; // init Weibull scale value
     /**
+     * Initial value for the Dirichlet concentration parameter {@link Objects.IterationValues#weibullScale}.
+     */
+    public double initialDirichletConcentration; // init Dirichlet concentration value
+    /**
      * Initial value for the Weibull scale parameter {@link Objects.IterationValues#weibullScale}.
      */
     public double initialGaussianResidual; // init Weibull scale value
@@ -195,13 +199,14 @@ public class Arguments {
      */
     public double gaussianResidualUniformPriorHyperparameter2;
     /**
-     * Gamma prior hyper-parameter 1 for Gaussian residual SD.
+     * Inverse-Gamma prior hyper-parameter 1 for Gaussian residual SD.
      */
-    public double gaussianResidualPrecisionGammaPriorHyperparameter1;
+    public double gaussianResidualVarianceInvGammaPrior_a;
     /**
-     * Gamma prior hyper-parameter 2 for Gaussian residual SD.
+     * Inverse-Gamma prior hyper-parameter 2 for Gaussian residual SD.
      */
-    public double gaussianResidualPrecisionGammaPriorHyperparameter2;
+    public double gaussianResidualVarianceInvGammaPrior_b;
+    
     /**
      * Hyper-parameter 1 for a Gamma prior on the Weibull scale parameter.
      */
@@ -210,6 +215,26 @@ public class Arguments {
      * Hyper-parameter 2 for a Gamma prior on the Weibull scale parameter.
      */
     public double weibullScaleGammaPriorHyperparameter2;
+    /**
+     * Hyper-parameter 1 for a Gamma prior on the Dirichlet concentration parameter.
+     */
+    public double dirichletConcentrationGammaPriorHyperparameter1;
+    /**
+     * Hyper-parameter 2 for a Gamma prior on the Dirichlet concentration parameter.
+     */
+    public double dirichletConcentrationGammaPriorHyperparameter2;
+    /**
+     * Lower-bound for truncated Gamma prior on the Dirichlet concentration parameter.
+     */
+    public double dirichletConcentrationMinimum;
+    /**
+     * Lower-bound for truncated Gamma prior on the Dirichlet concentration parameter.
+     */
+    public double logDirichletConcentrationMinimum;
+    /**
+     * Multiplier for AUC multiplier within the posterior.
+     */
+    public double aucMultiplierWeight;
     
     /**
      * 
@@ -218,39 +243,49 @@ public class Arguments {
      */
     
     /**
-     * SD of the proposal distribution for the intercept 
+     * Initial SD of the proposal distribution for the intercept 
      * {@link Objects.IterationValues#alpha}.
      */
     public double proposalDistributionSdForAlpha;
     /**
-     * SD of the proposal distribution for the betas 
+     * Initial SD of the proposal distribution for the betas 
      * {@link Objects.IterationValues#betas}.
      */
     public double proposalDistributionSdForBetas;
     /**
-     * SD of the proposal distribution for a beta upon addition to the model.
+     * Initial SD of the proposal distribution for a beta upon addition to the model.
      */
     public double proposalDistributionSdForAddingBeta;
     /**
-     * SD of the proposal distribution for a beta upon addition to the model 
+     * Initial SD of the proposal distribution for a beta upon addition to the model 
      * during a swap move.
      */
     public double proposalDistributionSdForSwappedInBeta;
     /**
-     * SD of the proposal distribution for the unknown prior SD(s) for the betas
+     * Initial SD of the proposal distribution for the unknown prior SD(s) for the betas
      * {@link Objects.IterationValues#logBetaPriorSd}.
      */
     public double proposalDistributionSdForBetaPriorSd;
     /**
-     * SD of the proposal distribution for the Weibull scale parameter
+     * Initial SD of the proposal distribution for the Weibull scale parameter
      * {@link Objects.IterationValues#logWeibullScale}.
      */
     public double proposalDistributionSdForLogWeibullScale;
     /**
-     * SD of the proposal distribution for the Gaussian residual parameter
+     * Initial SD of the proposal distribution for the Dirichlet concentration parameter
+     */
+    public double proposalDistributionSdForDirichletConcentration;    
+    /**
+     * Initial SD of the proposal distribution for the Gaussian residual parameter
      * {@link Objects.IterationValues#logGaussianResidual}.
      */
     public double proposalDistributionSdForLogGaussianResidual;
+    /**
+     * Initial SD of the proposal distribution for the tau variable selection
+     * coefficient
+     * {@link Objects.IterationValues#tau}.
+     */
+    public double proposalDistributionSdForTau;
     
     /**
      * 
@@ -369,6 +404,16 @@ public class Arguments {
         weibullScaleGammaPriorHyperparameter2 = argScan.nextDouble();
 
         argumentNameInFile = argScan.next();        
+        dirichletConcentrationGammaPriorHyperparameter1 = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
+        dirichletConcentrationGammaPriorHyperparameter2 = argScan.nextDouble();
+
+        argumentNameInFile = argScan.next();        
+        dirichletConcentrationMinimum = argScan.nextDouble();
+        logDirichletConcentrationMinimum = Math.log(dirichletConcentrationMinimum);
+
+        argumentNameInFile = argScan.next();        
         gaussianResidualPriorFamily = argScan.nextInt();
         
         argumentNameInFile = argScan.next();        
@@ -378,10 +423,13 @@ public class Arguments {
         gaussianResidualUniformPriorHyperparameter2 = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
-        gaussianResidualPrecisionGammaPriorHyperparameter1 = argScan.nextDouble();
+        gaussianResidualVarianceInvGammaPrior_a = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
-        gaussianResidualPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
+        gaussianResidualVarianceInvGammaPrior_b = argScan.nextDouble();
+
+        argumentNameInFile = argScan.next();        
+        aucMultiplierWeight = argScan.nextDouble();
         
         /**
          * Initial Values.
@@ -398,6 +446,9 @@ public class Arguments {
 
         argumentNameInFile = argScan.next();        
         initialWeibullScale = argScan.nextDouble();
+
+        argumentNameInFile = argScan.next();        
+        initialDirichletConcentration = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         initialGaussianResidual = argScan.nextDouble();
@@ -444,7 +495,13 @@ public class Arguments {
         proposalDistributionSdForLogWeibullScale = argScan.nextDouble();
 
         argumentNameInFile = argScan.next();        
+        proposalDistributionSdForDirichletConcentration = argScan.nextDouble();
+        
+        argumentNameInFile = argScan.next();        
         proposalDistributionSdForLogGaussianResidual = argScan.nextDouble();
+
+        argumentNameInFile = argScan.next();        
+        proposalDistributionSdForTau = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
         proposalDistributionSdForAddingBeta = argScan.nextDouble();
