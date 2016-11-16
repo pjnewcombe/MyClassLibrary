@@ -58,6 +58,7 @@ public class GeneralMethods {
      * Chooses a Reversible Jump move type.
      * 
      * @param M Total number of variables.
+     * @param maxAllowedMarkers Specifies a maximum number of selected variables.
      * @param presentMarkN Number of variables currently included.
      * @param moveProbabilities Vector of probabilities with which to select the
      * different move types.
@@ -138,56 +139,7 @@ public class GeneralMethods {
               + Math.log(Math.pow(modPriMean, nVarsProp)) 
               - Math.log(Math.pow(modPriMean, nVarsCurr));
       return logModelPriorRatio ;
-    }  
-
-//  /**
-//   * OLD AND INCORRECT!!
-//   * Calculates the log-ratio of prior support for two models, under a
-//   * Beta-Binomial prior on model dimension (to be used in the
-//   * calculation of the acceptance probability).
-//   * 
-//   * @param nVarsCurr Number of variables selected in the current model
-//   * @param nVarsProp Number of variables selected in the proposed model
-//   * @param modSpaceSize Total number of covariates
-//   * @param modPriBetaBinA Beta-Binomial prior hyper-parameter a
-//   * @param modPriBetaBinB Beta-Binomial prior hyper-parameter b
-//   * @return Log-ratio of the prior support for both models.
-//   */
-//  public static double logModelPriorRatioBetaBin_OLD(
-//          int nVarsCurr,
-//          int nVarsProp,
-//          int modSpaceSize,
-//          double modPriBetaBinA,
-//          double modPriBetaBinB) {
-//      // BetaBinomial for proposal is:
-//      // Beta(nVarsCurr+modPriBetaA, modSpaceSize-nVarsCurr+modPriBetaB)
-//      // = (nVarsCurr+modPriBetaA-1)!(modSpaceSize-nVarsCurr+modPriBetaB-1)!
-//      //    /(modSpaceSize+modPriBetaA+modPriBetaB-1)!
-//      // Can take advantage of cancelling factorials
-//      //
-//      // Numerator - corresponds to proposed likelihood/prior
-//      // Denominator - corresponds to curren likelihood/prior
-//      double logModelPriorRatio = 0;
-//      // Work out difference in model size between iterations to take advantage
-//      // of cancelling factorials
-//      int sizeDiff = nVarsProp-nVarsCurr;
-//      if (sizeDiff==1) {
-//          // addition
-//          //(nVarsProp+modPriBetaA-1)
-//          // / (modSpaceSize-nVarsCurr+modPriBetaB-1)
-//          logModelPriorRatio =
-//                  Math.log((nVarsProp+modPriBetaBinA-1))
-//                  -Math.log((modSpaceSize-nVarsCurr+modPriBetaBinB-1));
-//      } else if (sizeDiff==-1) {
-//          // removal
-//          //(modSpaceSize-nVarsProp+modPriBetaB-1)
-//          // / (nVarsCurr+modPriBetaA-1)
-//          logModelPriorRatio =
-//                  Math.log((modSpaceSize-nVarsProp+modPriBetaBinB-1))
-//                  -Math.log((nVarsCurr+modPriBetaBinA-1));
-//      }
-//      return logModelPriorRatio ;
-//    }  
+    }
 
   /**
    * Calculates the log-ratio of prior support for two models, under a
@@ -364,9 +316,7 @@ public class GeneralMethods {
                   betas.set(m, 0, betas.get(m, 0)/sumOfAbsoluteValues);
               }
           }
-
-                System.out.println("betasNorm "+betas.get(1,0));
-
+          System.out.println("betasNorm "+betas.get(1,0));
           
           // Return
           return betas;
@@ -483,6 +433,5 @@ public class GeneralMethods {
               }              
           }
           return whichBlocksUpdated;
-      }
-    
+      } 
 }

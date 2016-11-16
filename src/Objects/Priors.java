@@ -73,7 +73,7 @@ public class Priors {
         weibullScalePrior = new GammaDist(arguments.weibullScaleGammaPriorHyperparameter1,
                 arguments.weibullScaleGammaPriorHyperparameter2);
         /**
-         * Variance ~ InvGamma iff Precision ~ Gamma
+         * Variance ~ InvGamma IFF Precision ~ Gamma
          * Variance ~ InvGamma(a,b) 
          * -> Precision ~ Gamma(a,1/b)
          * -> Precision ~ Gamma(a,b) [Java parameterisation is upside down]

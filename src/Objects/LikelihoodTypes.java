@@ -1,7 +1,7 @@
 package Objects;
 
 /**
- * Enumerates the different parameter types.
+ * Enumerates the different likelihood types.
  * 
  * @author Paul J Newcombe
  */
@@ -14,5 +14,4 @@ public enum LikelihoodTypes {
     LOGISTIC, CLOGLOG, WEIBULL, GAUSSIAN, GAUSSIAN_CONJ,
     JAM_MCMC, JAM, JAMv2, ROCAUC, ROCAUC_ANCHOR, COX,
     CASECOHORT_PRENTICE, CASECOHORT_BARLOW;
-    
 }

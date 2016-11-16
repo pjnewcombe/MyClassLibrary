@@ -191,13 +191,5 @@ public class GeneralMaths {
         }        
 
         return normalisedProportions;
-    }   
-    
-
-    
-
-     
-     
-     
-
+    }
 }

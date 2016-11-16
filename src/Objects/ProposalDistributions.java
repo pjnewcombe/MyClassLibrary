@@ -99,14 +99,15 @@ public class ProposalDistributions {
     public void adapt(Data data, IterationValues Its, int i) {
         if (i<adaptionLength) {
             for (int j=0; j<numberOfProposalDistributions; j++) {
-                if (adapting[j]==1) { ///////////////////////////
-                    // NOTE: Order of following steps must remain for same results
+                if (adapting[j]==1) {
+                    // NB: Changing the order of the following steps will
+                    // change results.
                     // Reset numerator and denominator at end of bin
                     if (acceptanceRateDenominators[j]==adaptionInterval) {
                         acceptanceRateNumerators[j]=0;
                         acceptanceRateDenominators[j]=0;
                     }
-                    // Add 1 to denominator of parameter attempted to update
+                    // Add 1 to denominator relating to the parameter updated
                     if (Its.whichParameterTypeUpdated ==j) {
                         acceptanceRateDenominators[j]=acceptanceRateDenominators[j]+1;
                     }
@@ -121,7 +122,8 @@ public class ProposalDistributions {
                             proposalDistributionSds[j]=proposalDistributionSds[j]*0.99;
                         }
                     }
-                    // Add 1 to numerator of parameter updated if proposalAccepted
+                    // Add 1 to numerator of parameter updated if proposal
+                    // accepted
                     if (Its.proposalAccepted==1&&Its.whichParameterTypeUpdated==j) {
                         acceptanceRateNumerators[j]=acceptanceRateNumerators[j]+1;
                     }
@@ -135,9 +137,10 @@ public class ProposalDistributions {
                     //System.out.println(ParameterTypes.values()[v]+" final proposal SD: "+proposalDistributionSds[v]);                            
                 }
             }
-            // SET ADDITION AND SWAP PROPOSAL SDS TO FRACTION OF LOGOR SD
+            // Set addition and swap proposal SDs to a fraction of the beta
+            // SD.
             proposalDistributionSds[ParameterTypes.BETA_ADD.ordinal()] = (double)(proposalDistributionSds[ParameterTypes.BETAS.ordinal()]);
-            // swap SD should be smaller than addition SD
+            // Swap SD should be smaller than addition SD.
             proposalDistributionSds[ParameterTypes.BETA_SWAP.ordinal()] = (double)(proposalDistributionSds[ParameterTypes.BETAS.ordinal()]/(data.totalNumberOfCovariates-data.numberOfCovariatesToFixInModel));            
         }
     }

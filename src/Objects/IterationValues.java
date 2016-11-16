@@ -3,13 +3,9 @@ package Objects;
 import Methods.GeneralMaths;
 import Jama.Matrix;
 import Methods.GeneralMethods;
-import static java.lang.Math.abs;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Random;
-import org.apache.commons.math3.distribution.GammaDistribution;
 
 /**
  * This class contains a model and parameter values, in addition to it's
@@ -1194,13 +1190,6 @@ public class IterationValues {
          * can result in NaN's with very varianceEstimateN's meaning the program
          * fails (this is called from the IterationValues Constructor),
          */
-//        if (data.numberOfHierarchicalCovariatePriorPartitions > 0) {
-//            for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
-//                logPrior = logPrior +
-//                        Math.log(priors.betaPrecisionConjugateGammaPrior.density(
-//                                (double) (1/(betaPriorSds[c]*betaPriorSds[c]))));
-//            }
-//        }
         logPrior = logPrior +
                 Math.log(priors.betaPrecisionConjugateGammaPrior.density(
                         (double) (1/data.tau)));
@@ -1363,90 +1352,6 @@ public class IterationValues {
                     count++;
                 }
             }
-//            for (int m=0; m<totalNumberOfCovariates; m++) {
-//                /**
-//                 * Differences are drawn on the log-scale from a one-sided
-//                 * normal distribution. Then randomly added towards or away
-//                 * from the origin (so the sign can change).
-//                 */
-//                if (model[m] == 1) {
-//                    if (count==markUpdate) {
-//                        double diffLogScale = abs(GeneralMaths.normalDraw(
-//                                    0,
-//                                    propsds.proposalDistributionSds[ParameterTypes.BETAS.ordinal()], r));
-//                        double absDiffWeightScale = 
-//                                Math.exp(
-//                                    Math.log(Math.abs(betas.get(m, 0)))
-//                                        +diffLogScale
-//                                ) - betas.get(m, 0);                        
-//                        int addDiffTowards0 = r.nextInt(2);
-//                        if (addDiffTowards0==0) {
-//                            betas.set(m, 0, 
-//                                    betas.get(m, 0) - Math.signum(betas.get(m, 0))
-//                                            *absDiffWeightScale);
-//                        } else {
-//                            betas.set(m, 0, 
-//                                    betas.get(m, 0) + Math.signum(betas.get(m, 0))
-//                                            *absDiffWeightScale);                            
-//                        }
-//                        whichBetaUpdated = m;
-//                    }
-//                    count++;
-//                }
-//            }
-//            for (int m=0; m<totalNumberOfCovariates; m++) {
-//                /**
-//                 * Differences are drawn on the original scale.
-//                 */
-//                if (model[m] == 1) {
-//                    if (count==markUpdate) {
-//                        double newbeta = GeneralMaths.normalDraw(
-//                                    betas.get(m, 0), 
-//                                    propsds.proposalDistributionSds[ParameterTypes.BETAS.ordinal()], r);
-//                        betas.set(m, 0, newbeta);
-//                        whichBetaUpdated = m;
-//                    }
-//                    count++;
-//                }
-//            }
-//            double scaler = propsds.proposalDistributionSds[ParameterTypes.BETAS.ordinal()];
-//            for (int m=0; m<totalNumberOfCovariates; m++) {
-//                /**
-//                 * Differences are drawn from a gamma distribution.
-//                 */
-//                if (model[m] == 1) {
-//                    if (count==markUpdate) {
-//                        /**
-//                         * Trying this
-//                         * http://stats.stackexchange.com/questions/69210/drawing-from-dirichlet-distribution
-//                         */
-//                        //System.out.println("Start "+newbeta);
-//                        if (m>=0) {
-//                        //System.out.println("beta "+m+" "+Math.abs(betas.get(m, 0)));
-//                        //System.out.println("scaler "+m+" "+Math.abs(betas.get(m, 0))*scaler);                            
-//                        }
-//                        double newbeta = new GammaDistribution(Math.abs(betas.get(m, 0))*scaler,1).sample();
-//                        if (newbeta<=0.00000000000000000001) {
-//                            newbeta=0.00000000000000000001;
-//                        }
-//                        int flipSign = r.nextInt(3);
-//                        if (flipSign==0) {
-//                            // Flip sign with 1/3 chance
-//                            betas.set(m, 0, -Math.signum(betas.get(m, 0))*newbeta);                                                        
-//                        } else {
-//                            betas.set(m, 0, Math.signum(betas.get(m, 0))*newbeta);                                                        
-//                        }
-//                        if (m>0) {
-//                        //System.out.println("New "+m+" "+newbeta);                            
-//                        }
-//                        
-//                        whichBetaUpdated = m;
-//                    } else {
-//                        betas.set(m, 0, betas.get(m, 0)*scaler);                        
-//                    }
-//                    count++;
-//                }
-//            }
         } else {
             for (int m=0; m<totalNumberOfCovariates; m++) {
                 if (model[m] == 1) {
@@ -1461,7 +1366,6 @@ public class IterationValues {
                 }
             }
         }
-        
     }
     
     /**
@@ -1532,6 +1436,8 @@ public class IterationValues {
      * 
      * @param propsds {@link Objects.ProposalDistributions} class object, containing all
      * proposal distribution SDs
+     * @param logMinValue Specify a minimum for the log-Dirichlet concentration
+     * parameter.
      * @param r Random number generator object
      */
     public void updateDirichletConcentration(
@@ -2804,7 +2710,5 @@ public class IterationValues {
             acceptanceProbability = Math.min(1,
                     Math.exp(logNumerator
                     -logDenominator+logModelPriorRatio));
-    }
-    
+    }    
 }
-

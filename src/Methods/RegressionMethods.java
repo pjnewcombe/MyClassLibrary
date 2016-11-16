@@ -22,6 +22,8 @@ public class RegressionMethods {
      * whether or not each parameter was present for the iteration. Note that
      * only marker OR parameters may of been absent for the iteration.
      *
+     * @param arguments {@link Objects.Arguments} class object.
+     * @param data {@link Objects.Data} class object.
      * @param curr
      *          RegressionIterationValues Object: Current likelihoodFamily and parameter values
      * @param buffer
@@ -58,6 +60,4 @@ public class RegressionMethods {
 
             buffer.newLine();
     }
-
-
 }
