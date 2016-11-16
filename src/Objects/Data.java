@@ -13,6 +13,11 @@ import java.util.Scanner;
 public class Data {
     
     /**
+     * Repeatedly used to read into.
+     */
+    private String dataNameInFile;
+    
+    /**
      * 
      * Basic data. These variables contain the data, and key aspects such as the
      * number of covariates and individuals.
@@ -57,6 +62,7 @@ public class Data {
     public double minSensitivityOrYval;
     public double minAuc;
     public double maxAuc;
+    
     /**
      * Vector of continuous binaryOutcomes for each individual.
      */
@@ -71,15 +77,6 @@ public class Data {
     public int[] subcohort;
     public double barlowMultiplier;
     public double casecohortPseudoLikelihoodMultiplier;
-    /*
-    * Initial parameter values.
-    */
-    public int inits_provided;
-    public double init_alpha;
-    public double[] init_betas;
-    public double[] init_betaPriorSds;
-    public double init_weibullScale;
-    public double init_gaussianResidual;
     
     /**
      * 
@@ -147,17 +144,47 @@ public class Data {
      */
     public int numberOfHierarchicalCovariatePriorPartitions;
     /**
-     * Number of covariates in each model space component using the same
-     * common prior with unknown SD.
+     * Integer vector containing an index for which hierarchical covariate
+     * prior partition each covariate belongs to.
      */
-    public int[] hierarchicalCovariatePriorPartitionSizes;
+    public int[] hierarchicalCovariatePriorPartitionPicker;
+
     /**
-     * Covariate indices which partition the covariates into the different
-     * model space components using the same common prior with unknown SD over
-     * the betas.
+     * Integer vector containing an index for the prior family of each
+     * hierarchical covariate prior (1=Uniform, 2=Gamma).
      */
-    public int[] hierarchicalCovariatePriorPartitionIndices;
-        
+    public int[] hierarchicalCovariatePriorPartitionFamilies;
+    
+    /**
+     * Vector of doubles containing the first Uniform hyper-parameter of the
+     * beta SD prior for each hierarchical partition.
+     */
+    public double[] hierarchicalCovariatePriorSd_UniformHyperparameter1;
+    
+    /**
+     * Vector of doubles containing the second Uniform hyper-parameter of the
+     * beta SD prior for each hierarchical partition.
+     */
+    public double[] hierarchicalCovariatePriorSd_UniformHyperparameter2;
+
+    /**
+     * Vector of doubles containing the first Gamma hyper-parameter of the
+     * beta SD prior for each hierarchical partition.
+     */
+    public double[] hierarchicalCovariatePriorPrecision_GammaHyperparameter1;
+
+    /**
+     * Vector of doubles containing the second Gamma hyper-parameter of the
+     * beta SD prior for each hierarchical partition.
+     */
+    public double[] hierarchicalCovariatePriorPrecision_GammaHyperparameter2;
+    
+    /**
+     * Initial values for the unknown prior SDs common to all betas in a
+     * model space component {@link Objects.IterationValues#logBetaPriorSd}.
+     */
+    public double[] initialBetaPriorSds; // init SD value of beta hyper prior
+    
     /**
      * 
      * Covariate prior setup. Information defining the covariate prior setup,
@@ -282,6 +309,9 @@ public class Data {
         if (likelihoodFamily.equals("Logistic")) {
             nExtraParametersBeyondLinPred=0;
             whichLikelihoodType=LikelihoodTypes.LOGISTIC.ordinal();
+        } else if (likelihoodFamily.equals("CLogLog")) {
+            nExtraParametersBeyondLinPred=0;
+            whichLikelihoodType=LikelihoodTypes.CLOGLOG.ordinal();
         } else if (likelihoodFamily.equals("RocAUC")) {
             nExtraParametersBeyondLinPred=1; // For beta prior SD
             whichLikelihoodType=LikelihoodTypes.ROCAUC.ordinal();
@@ -303,6 +333,9 @@ public class Data {
         } else if (likelihoodFamily.equals("JAM")) {
             nExtraParametersBeyondLinPred=1;
             whichLikelihoodType=LikelihoodTypes.JAM.ordinal();            
+        } else if (likelihoodFamily.equals("JAMv2")) {
+            nExtraParametersBeyondLinPred=1;
+            whichLikelihoodType=LikelihoodTypes.JAMv2.ordinal();            
         } else if (likelihoodFamily.equals("Cox")) {
             nExtraParametersBeyondLinPred=0;
             whichLikelihoodType=LikelihoodTypes.COX.ordinal();            
@@ -313,54 +346,150 @@ public class Data {
             nExtraParametersBeyondLinPred=0;
             whichLikelihoodType=LikelihoodTypes.CASECOHORT_BARLOW.ordinal();            
         }
-        totalNumberOfCovariates = dataScan.nextInt();             // no. variables (including interaction terms)
+        
+        dataNameInFile = dataScan.next();
+        totalNumberOfCovariates = dataScan.nextInt();
+        
         covariateNames = new String[totalNumberOfCovariates];
         for (int v=0; v<totalNumberOfCovariates; v++) {
             covariateNames[v] = dataScan.next();
         }
+        
+        dataNameInFile = dataScan.next();
         numberOfCovariatesToFixInModel = dataScan.nextInt();         // Number of vars which have no RJ (at begininng)
-        numberOfIndividuals = dataScan.nextInt();             // No. Studies
-        int numberOfClustersDummy = dataScan.nextInt();             // No. clusters
+        
+        dataNameInFile = dataScan.next();
+        numberOfIndividuals = dataScan.nextInt();
         
         /**
          * 
-         * Setup information describing the model space. Required below.
+         * Read in information Dirichlet prior information (for ROC model).
          * 
          */
         
-        modelSpacePoissonPriorMeans = new double[arguments.numberOfModelSpacePriorPartitions];
-        modelSpacePartitionSizes = new int[arguments.numberOfModelSpacePriorPartitions];
-        modelSpacePartitionIndices = new int[(arguments.numberOfModelSpacePriorPartitions+1)];
-        modelSpacePartitionIndices[0] = numberOfCovariatesToFixInModel;
-        modelSpacePartitionIndices[arguments.numberOfModelSpacePriorPartitions] = totalNumberOfCovariates;
-        int compSizeTotal = 0;
-        if (arguments.numberOfModelSpacePriorPartitions>1) {     // Only in data if >1 components
-            for (int i=0; i<(arguments.numberOfModelSpacePriorPartitions-1); i++) {  //1st & last split already done
-                if (arguments.modelSpacePriorFamily==0) { // Poisson
-                    modelSpacePoissonPriorMeans[i] = arguments.modelSpacePoissonPriorRate[i]
-                            *arguments.modelSpacePriorPartitionSizes[i];
-                } else if (arguments.modelSpacePriorFamily==1) { // Beta-binomial
-                    modelSpacePartitionSizes[i] = arguments.modelSpacePriorPartitionSizes[i];                    
+        if (whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()) {
+            priorDirichletWeights = new double[totalNumberOfCovariates];
+            for (int v=0; v<totalNumberOfCovariates; v++) {
+                priorDirichletWeights[v]  = dataScan.nextDouble();
+            }
+        }
+        
+        /**
+         * 
+         * Read in information regarding the covariate effect priors.
+         * 
+         */
+        
+        if (whichLikelihoodType!=LikelihoodTypes.ROCAUC.ordinal()) {
+            
+            // Must be initiated regardless of whether fixed
+            betaPriorMus = new double[totalNumberOfCovariates];
+            betaPriorSds = new double[totalNumberOfCovariates];
+            
+            dataNameInFile = dataScan.next(); // "NumberOfCovariatesWithInformativePriors"
+            numberOfCovariatesWithInformativePriors = dataScan.nextInt();  // Number of variables from the beginning
+            
+            if (numberOfCovariatesWithInformativePriors>0) {
+                dataNameInFile = dataScan.next(); // "FixedPriors"                
+                for (int v=0; v<numberOfCovariatesWithInformativePriors; v++) {
+                    betaPriorMus[v]  = dataScan.nextDouble();
+                    betaPriorSds[v]  = dataScan.nextDouble();
                 }
-                modelSpacePartitionIndices[i+1]=modelSpacePartitionIndices[i]
-                        +arguments.modelSpacePriorPartitionSizes[i];
-                compSizeTotal = compSizeTotal + arguments.modelSpacePriorPartitionSizes[i];
             }
-            int finalCompSize = totalNumberOfCovariates-numberOfCovariatesToFixInModel-compSizeTotal;
-            if (arguments.modelSpacePriorFamily==0) { // Poisson
-                modelSpacePoissonPriorMeans[arguments.numberOfModelSpacePriorPartitions-1] = 
-                        arguments.modelSpacePoissonPriorRate[arguments.numberOfModelSpacePriorPartitions-1]
-                        *finalCompSize;
-            } else if (arguments.modelSpacePriorFamily==1) { // Beta-binomial
-                modelSpacePartitionSizes[arguments.numberOfModelSpacePriorPartitions-1] = finalCompSize;                
+        }
+        
+        /**
+         * 
+         * Write information regarding the hierarchical beta prior partitions.
+         * 
+         */
+                
+        dataNameInFile = dataScan.next();
+        numberOfHierarchicalCovariatePriorPartitions = dataScan.nextInt();
+                
+        if (numberOfHierarchicalCovariatePriorPartitions>0) {
+            // Partition picker
+            hierarchicalCovariatePriorPartitionPicker = new int[totalNumberOfCovariates];
+            dataNameInFile = dataScan.next();
+            for (int v=numberOfCovariatesWithInformativePriors; v<totalNumberOfCovariates; v++) {
+                hierarchicalCovariatePriorPartitionPicker[v]  = (dataScan.nextInt()-1);
             }
-        } else {
-            if (arguments.modelSpacePriorFamily==0) { // Poisson
-                modelSpacePoissonPriorMeans[0] = arguments.modelSpacePoissonPriorRate[0]*
-                        (totalNumberOfCovariates-numberOfCovariatesToFixInModel);                
-            } else if (arguments.modelSpacePriorFamily==1) { // Beta-binomial
-                modelSpacePartitionSizes[0] = (totalNumberOfCovariates-numberOfCovariatesToFixInModel);                
+            // Partition-specific hierarchical prior parameters
+            hierarchicalCovariatePriorPartitionFamilies = new int[numberOfHierarchicalCovariatePriorPartitions];
+            hierarchicalCovariatePriorSd_UniformHyperparameter1 = new double[numberOfHierarchicalCovariatePriorPartitions];
+            hierarchicalCovariatePriorSd_UniformHyperparameter2 = new double[numberOfHierarchicalCovariatePriorPartitions];
+            hierarchicalCovariatePriorPrecision_GammaHyperparameter1 = new double[numberOfHierarchicalCovariatePriorPartitions];
+            hierarchicalCovariatePriorPrecision_GammaHyperparameter2 = new double[numberOfHierarchicalCovariatePriorPartitions];
+            initialBetaPriorSds = new double[numberOfHierarchicalCovariatePriorPartitions];
+            // Hyper-priors
+            dataNameInFile = dataScan.next();
+            for (int c=0; c<numberOfHierarchicalCovariatePriorPartitions; c++) {
+                String hierarchicalPriorFamily = dataScan.next();
+                if (hierarchicalPriorFamily.equals("Uniform")) {
+                    hierarchicalCovariatePriorPartitionFamilies[c] = HierarchicalCovariatePriorTypes.UNIFORM.ordinal();
+                    hierarchicalCovariatePriorSd_UniformHyperparameter1[c] = dataScan.nextDouble();
+                    hierarchicalCovariatePriorSd_UniformHyperparameter2[c] = dataScan.nextDouble();
+                } else if (hierarchicalPriorFamily.equals("Gamma")) {
+                    hierarchicalCovariatePriorPartitionFamilies[c] = HierarchicalCovariatePriorTypes.GAMMA.ordinal();
+                    hierarchicalCovariatePriorPrecision_GammaHyperparameter1[c] = dataScan.nextDouble();
+                    hierarchicalCovariatePriorPrecision_GammaHyperparameter2[c] = dataScan.nextDouble();                    
+                } else if (hierarchicalPriorFamily.equals("Jeffreys")) { // No hyper-parameters
+                    hierarchicalCovariatePriorPartitionFamilies[c] = HierarchicalCovariatePriorTypes.JEFFREYS.ordinal();
+                }
+                initialBetaPriorSds[c] = dataScan.nextDouble(); // Common for all families
             }
+        }
+                
+        /**
+         * 
+         * Read in the initial model (if provided).
+         * 
+         */
+        
+        dataNameInFile = dataScan.next();
+        initialModelOption = dataScan.nextInt();
+        
+        if (arguments.useReversibleJump==0) {
+            /**
+             * Saturated model forced if Reversible Jump is disabled.
+             */
+            initialModelOption = 1;
+        }
+        if (initialModelOption == 2) {
+            /**
+             * Read in user specified initial model.
+             */
+            initialModel = new int[totalNumberOfCovariates];
+            dataNameInFile = dataScan.next(); //"InitalModel"
+            for (int v=0; v<totalNumberOfCovariates; v++) {
+                initialModel[v] = dataScan.nextInt();
+            }
+        }
+        
+        /**
+         * 
+         * Read in conjugate-only modeling options.
+         * 
+         */
+        if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()
+                ) {
+            dataNameInFile = dataScan.next();
+            useGPrior = dataScan.nextInt();
+            
+            dataNameInFile = dataScan.next();
+            tau = dataScan.nextDouble();
+            
+            dataNameInFile = dataScan.next();
+            modelTau = dataScan.nextInt();
+            
+            dataNameInFile = dataScan.next();
+            enumerateUpToDim = dataScan.nextInt();            
+        }
+        if (whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()){
+            dataNameInFile = dataScan.next();
+            YtY = dataScan.nextDouble(); // An estimate of the trait variance is provided
         }
         
         /**
@@ -368,33 +497,22 @@ public class Data {
          * Read in covariate data. By LD block for marginal methods.
          * 
          */
-        
-        /**
-         * Modeling options for conjugate Gaussian models.
-         */
-        if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()
-                ) {
-            useGPrior = dataScan.nextInt();
-            tau = dataScan.nextDouble();
-            modelTau = dataScan.nextInt();
-            enumerateUpToDim = dataScan.nextInt();            
-        }
-        
-        
-        /**
-         * Read in covariate information. Very different for marginal models.
-         */
+                
         if (whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
+                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()
+                ) {
             /**
              * Read in block information.
              */
             
+            dataNameInFile = dataScan.next();
             nBlocks = dataScan.nextInt();
+            
             blockIndices = new int[(nBlocks+1)];
             blockSizes = new int[nBlocks];
             cumulativeBlockSizes = new int[nBlocks];
+            dataNameInFile = dataScan.next(); // "blockIndices"
             blockIndices[0] = (dataScan.nextInt()-1);
             blockIndices[0] = numberOfCovariatesToFixInModel;
             for (int b=0; b<nBlocks; b++) {
@@ -407,24 +525,37 @@ public class Data {
                             +cumulativeBlockSizes[b-1];                    
                 }
             }
-            
             /**
              * Read in X'X / L^-1*X'X, block by block.
              */
-            
-            X_Blocks = new Matrix[nBlocks];
-            for (int b=0; b<nBlocks; b++) {
-                X_Blocks[b] = new Matrix(blockSizes[b], blockSizes[b]);
-                for (int v1=0; v1<blockSizes[b]; v1++) {
-                    for (int v2=0; v2<blockSizes[b]; v2++) {
-                        X_Blocks[b].set(v1, v2,
-                                dataScan.nextDouble());
+            if (whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+                    whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()                    
+                    ) {
+                X_Blocks = new Matrix[nBlocks];
+                for (int b=0; b<nBlocks; b++) {
+                    X_Blocks[b] = new Matrix(blockSizes[b], blockSizes[b]);
+                    for (int v1=0; v1<blockSizes[b]; v1++) {
+                        for (int v2=0; v2<blockSizes[b]; v2++) {
+                            X_Blocks[b].set(v1, v2,
+                                    dataScan.nextDouble());
+                        }
                     }
                 }
+            } else if (whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()) {
+                XtX_Blocks = new Matrix[nBlocks];
+                for (int b=0; b<nBlocks; b++) {
+                    XtX_Blocks[b] = new Matrix(blockSizes[b], blockSizes[b]);
+                    for (int v1=0; v1<blockSizes[b]; v1++) {
+                        for (int v2=0; v2<blockSizes[b]; v2++) {
+                            XtX_Blocks[b].set(v1, v2,
+                                    dataScan.nextDouble());
+                        }
+                    }
+                }                
             }
         } else {
             /**
-             * Full IPD regression models. No blocks.
+             * IPD covariate matrix.
              */
             X = new Matrix(numberOfIndividuals,totalNumberOfCovariates);
             for (int i=0; i<numberOfIndividuals; i++) {
@@ -434,41 +565,6 @@ public class Data {
             }
         }
         
-       /**
-        * 
-        * Store various calculations which will be re-used, for efficiency.
-        * 
-        **/
-        
-        if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
-            /**
-             * Calculate X'X once. Can use sub-matrices each
-             * iteration.
-             */
-            XtX = (X.transpose()).times(X);            
-        } else if (whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()) {
-            /**
-             * Calculate inverse of X'X for each block. These are repeatedly
-             * re-used.
-             */
-            System.out.println("Taking inverse of xTx...");
-            InverseCovarianceMatrix_Blocks = new Matrix[nBlocks];
-            for (int b=0; b<nBlocks; b++) {
-                InverseCovarianceMatrix_Blocks[b] = X_Blocks[b].inverse();
-                System.out.println("  block "+(b+1)+"/"+nBlocks+" inverted");
-            }
-            System.out.println("...inverse calculated");   
-        } else if (whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
-            /**
-             * Calculate X'X for each block. Can use sub-matrices each
-             * iteration.
-             */
-            XtX_Blocks = new Matrix[nBlocks];
-            for (int b=0; b<nBlocks; b++) {
-                XtX_Blocks[b] = (X_Blocks[b].transpose()).times(X_Blocks[b]);
-            }
-         }
-
         /**
          * 
          * Read in outcome vector.
@@ -477,6 +573,7 @@ public class Data {
         
         binaryOutcomes = new int[numberOfIndividuals];
         if (whichLikelihoodType==LikelihoodTypes.LOGISTIC.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.CLOGLOG.ordinal()|
                 whichLikelihoodType==LikelihoodTypes.WEIBULL.ordinal()|
                 whichLikelihoodType==LikelihoodTypes.COX.ordinal()|
                 whichLikelihoodType==LikelihoodTypes.CASECOHORT_PRENTICE.ordinal()|
@@ -516,7 +613,9 @@ public class Data {
                 Y.set(i, 0, dataScan.nextDouble());
             }
         } else if (whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()|
-                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
+                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()
+                ) {
             Y = new Matrix(totalNumberOfCovariates,1);
             for (int i=0; i<totalNumberOfCovariates; i++) {
                 Y.set(i, 0, dataScan.nextDouble());
@@ -525,17 +624,31 @@ public class Data {
         
        /**
         * 
-        * Store various calculations which will be re-used, for efficiency.
+        * Store various calculations which will be repeatedly used in the
+        * MCMC. These are calculated once now for efficiency. Different 
+        * calculations are required for the different models.
         * 
         **/
         
         if (whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
+            /**
+             * Calculate X'X once. Sub-matrices used each iteration.
+             */
+            XtX = (X.transpose()).times(X);            
             /**
              * Calculate (L^-1t)'(L^-1t) for each block. Repeatedly used in
              * the likelihood calculation.
              */
             YtY = ((Y.transpose()).times(Y)).get(0,0);
         } else if (whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
+            /**
+             * Calculate X'X for each block. Can use sub-matrices each
+             * iteration.
+             */
+            XtX_Blocks = new Matrix[nBlocks];
+            for (int b=0; b<nBlocks; b++) {
+                XtX_Blocks[b] = (X_Blocks[b].transpose()).times(X_Blocks[b]);
+            }
             /**
              * Calculate (L^-1t)'(L^-1t) for each block. Repeatedly used in
              * the likelihood calculation.
@@ -550,6 +663,28 @@ public class Data {
                 YtY_Blocks[b] = (Y_Blocks[b].transpose().times(
                                 Y_Blocks[b])).get(0, 0);
             }
+        } else if (whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()) {
+            Y_Blocks = new Matrix[nBlocks];
+            YtY_Blocks = new double[nBlocks];
+            for (int b=0; b<nBlocks; b++) {
+                Y_Blocks[b] = Y.getMatrix(
+                        blockIndices[b],
+                        (blockIndices[b+1]-1),
+                        0, 0);
+                YtY_Blocks[b] = YtY; // Set equal to the estimated trait variance * N
+            }
+        }  else if (whichLikelihoodType==LikelihoodTypes.JAM_MCMC.ordinal()) {
+            /**
+             * Calculate inverse of X'X for each block. These are repeatedly
+             * re-used.
+             */
+            System.out.println("Taking inverse of xTx...");
+            InverseCovarianceMatrix_Blocks = new Matrix[nBlocks];
+            for (int b=0; b<nBlocks; b++) {
+                InverseCovarianceMatrix_Blocks[b] = X_Blocks[b].inverse();
+                System.out.println("  block "+(b+1)+"/"+nBlocks+" inverted");
+            }
+            System.out.println("...inverse calculated");   
         } else if (whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()|
                 whichLikelihoodType==LikelihoodTypes.ROCAUC_ANCHOR.ordinal()) {
             /**
@@ -607,65 +742,49 @@ public class Data {
             //NEW: for logging the AUC: aucMultiplier = (double) arguments.aucMultiplierWeight * (nCases*Math.log(prevalence)+nControls*Math.log(1-prevalence))/Math.log(0.5);
         }
         
-        
         /**
          * 
-         * Read in information regarding the prior setup.
+         * Setup information describing the model space. 
+         * Could move this to the arguments class? 
+         * Here because historically was used for beta prior partitions.
          * 
          */
-        if (whichLikelihoodType==LikelihoodTypes.ROCAUC.ordinal()) {
-            priorDirichletWeights = new double[totalNumberOfCovariates];
-            for (int v=0; v<totalNumberOfCovariates; v++) {
-                priorDirichletWeights[v]  = dataScan.nextDouble();
+        
+        modelSpacePoissonPriorMeans = new double[arguments.numberOfModelSpacePriorPartitions];
+        modelSpacePartitionSizes = new int[arguments.numberOfModelSpacePriorPartitions];
+        modelSpacePartitionIndices = new int[(arguments.numberOfModelSpacePriorPartitions+1)];
+        modelSpacePartitionIndices[0] = numberOfCovariatesToFixInModel;
+        modelSpacePartitionIndices[arguments.numberOfModelSpacePriorPartitions] = totalNumberOfCovariates;
+        int compSizeTotal = 0;
+        if (arguments.numberOfModelSpacePriorPartitions>1) {     // Only in data if >1 components
+            for (int i=0; i<(arguments.numberOfModelSpacePriorPartitions-1); i++) {  //1st & last split already done
+                if (arguments.modelSpacePriorFamily==0) { // Poisson
+                    modelSpacePoissonPriorMeans[i] = arguments.modelSpacePoissonPriorRate[i]
+                            *arguments.modelSpacePriorPartitionSizes[i];
+                } else if (arguments.modelSpacePriorFamily==1) { // Beta-binomial
+                    modelSpacePartitionSizes[i] = arguments.modelSpacePriorPartitionSizes[i];                    
+                }
+                modelSpacePartitionIndices[i+1]=modelSpacePartitionIndices[i]
+                        +arguments.modelSpacePriorPartitionSizes[i];
+                compSizeTotal = compSizeTotal + arguments.modelSpacePriorPartitionSizes[i];
+            }
+            int finalCompSize = totalNumberOfCovariates-numberOfCovariatesToFixInModel-compSizeTotal;
+            if (arguments.modelSpacePriorFamily==0) { // Poisson
+                modelSpacePoissonPriorMeans[arguments.numberOfModelSpacePriorPartitions-1] = 
+                        arguments.modelSpacePoissonPriorRate[arguments.numberOfModelSpacePriorPartitions-1]
+                        *finalCompSize;
+            } else if (arguments.modelSpacePriorFamily==1) { // Beta-binomial
+                modelSpacePartitionSizes[arguments.numberOfModelSpacePriorPartitions-1] = finalCompSize;                
             }
         } else {
-            numberOfCovariatesWithInformativePriors = dataScan.nextInt();  // Number of variables from the beginning
-            betaPriorMus = new double[totalNumberOfCovariates];
-            betaPriorSds = new double[totalNumberOfCovariates];
-            for (int v=0; v<numberOfCovariatesWithInformativePriors; v++) {
-                betaPriorMus[v]  = dataScan.nextDouble();
-                betaPriorSds[v]  = dataScan.nextDouble();
+            if (arguments.modelSpacePriorFamily==0) { // Poisson
+                modelSpacePoissonPriorMeans[0] = arguments.modelSpacePoissonPriorRate[0]*
+                        (totalNumberOfCovariates-numberOfCovariatesToFixInModel);                
+            } else if (arguments.modelSpacePriorFamily==1) { // Beta-binomial
+                modelSpacePartitionSizes[0] = (totalNumberOfCovariates-numberOfCovariatesToFixInModel);                
             }
-        }
-        
-        numberOfHierarchicalCovariatePriorPartitions = dataScan.nextInt();  // Could be 0
-        if (numberOfHierarchicalCovariatePriorPartitions>0) {
-            numberOfHierarchicalCovariatePriorPartitions=1; // FORCE TO 1 FOR NOW
         }        
-        hierarchicalCovariatePriorPartitionIndices = new int[(numberOfHierarchicalCovariatePriorPartitions+1)];
-        hierarchicalCovariatePriorPartitionIndices[0] = numberOfCovariatesWithInformativePriors; // could be 0
-        hierarchicalCovariatePriorPartitionIndices[numberOfHierarchicalCovariatePriorPartitions] = totalNumberOfCovariates;
-        if (numberOfHierarchicalCovariatePriorPartitions>1) {     // Only in data if >1 components
-            hierarchicalCovariatePriorPartitionSizes = new int[(numberOfHierarchicalCovariatePriorPartitions-1)];
-            for (int i=0; i<(numberOfHierarchicalCovariatePriorPartitions-1); i++) {
-                hierarchicalCovariatePriorPartitionSizes[i] = dataScan.nextInt(); //Model Space Poisson Means
-                hierarchicalCovariatePriorPartitionIndices[i+1]=hierarchicalCovariatePriorPartitionIndices[i]+hierarchicalCovariatePriorPartitionSizes[i];
-            }
-        }
-        
-        /**
-         * 
-         * Initial model.
-         * 
-         */
-        
-        initialModelOption = dataScan.nextInt();
-        if (arguments.useReversibleJump==0) {
-            /**
-             * Saturated model used if Reversible Jump is disabled.
-             */
-            initialModelOption = 1;
-        }
-        if (initialModelOption==2) {
-            /**
-             * Read in user specified initial model.
-             */
-            initialModel = new int[totalNumberOfCovariates];
-            for (int v=0; v<totalNumberOfCovariates; v++) {
-                initialModel[v] = dataScan.nextInt();
-            }
-        }
-                
+               
         /**
          * 
          * Feedback basic information about the dataset just read in, to the
@@ -686,85 +805,72 @@ public class Data {
                 System.out.println("Truncated to maximum FPR "+maxFprOrXval);                
             }
         }
-        if (whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+        if (
+                whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+                whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()|
                 whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
             if (useGPrior==1) {
-                System.out.println("G-prior in use.");
+                System.out.println("G-prior in use");
             } else if (useGPrior==0) {
-                System.out.println("Independent priors in use.");                
+                System.out.println("Independent priors in use");                
             }
             if (modelTau==0) {
                 System.out.println("Tau set to "+tau);                
             } else {
-                System.out.println("Tau is being modelled.");                
+                System.out.println("Tau is being modelled");                
             }
         }
-        System.out.println(numberOfIndividuals+" individuals.");
+        System.out.println(numberOfIndividuals+" individuals");
         System.out.println(totalNumberOfCovariates+" covariates");
         
         System.out.println("");
         System.out.println("--------------");
         System.out.println("--- PRIORS ---");
         System.out.println("--------------");
+        /*
+        * Covariate priors
+        */
+        if (numberOfCovariatesWithInformativePriors==totalNumberOfCovariates) {
+            System.out.println("Fixed priors on effect sizes have been"
+                    + " provided for all covariates");
+        } else {
+            System.out.println("Fixed effect priors are in use for "
+                    +numberOfCovariatesWithInformativePriors+ " covariates");
+            System.out.println("The other covariates are partitioned into "
+                    + numberOfHierarchicalCovariatePriorPartitions+" group(s)"
+                    + " within each of which a common prior with unknown"
+                    + " variance is used for the effects");
+        }
+        /*
+        * Model space priors
+        */
         if (arguments.useReversibleJump==0) {
             // No Model selection
             System.out.println("Model selection is DISABLED - all covariates"
                     + " are fixed in the model");
-            System.out.println("Priors have been provided on the effect of"
-                    + " all covariates");
-            
         } else {
             // Model selection will be used
             System.out.println(numberOfCovariatesToFixInModel
                     +" covariates will be fixed in the model");
-            if (arguments.numberOfModelSpacePriorPartitions>1) {
+            if (arguments.numberOfModelSpacePriorPartitions==1) {
+                if (arguments.modelSpacePriorFamily==0) {
+                    System.out.println("Model selection will be performed for "
+                            +(totalNumberOfCovariates-numberOfCovariatesToFixInModel)
+                            + " covariates, using a Poisson prior on the"
+                            + " proportion to include");
+                } else if (arguments.modelSpacePriorFamily==1) {
+                    System.out.println("Model selection will be performed for "
+                            +(totalNumberOfCovariates-numberOfCovariatesToFixInModel)
+                            + " covariates, using a Beta-binomial prior on the"
+                            + " proportion to include");
+                }
+            } else if (arguments.numberOfModelSpacePriorPartitions>1) {
                 System.out.println("Model selection will be performed for "
                         +(totalNumberOfCovariates-numberOfCovariatesToFixInModel)
                         +" covariates, split across "
                         +arguments.numberOfModelSpacePriorPartitions
                         +" partitions of differing apriori support");
-                // Model space
-                if (arguments.modelSpacePriorFamily==0) {
-                    System.out.println("Within each partition, Poisson priors"
-                            + " will be used on the number of covariates to"
-                            + " include");
-                } else if (arguments.modelSpacePriorFamily==1) {
-                    System.out.println("Within each partition, Beta-binomial"
-                            + " priors will be used for the number of"
-                            + " covariates to include");            
-                }
-                // Covariates
-                if (numberOfCovariatesWithInformativePriors==numberOfCovariatesToFixInModel) {
-                    System.out.println("Common priors with unknown SDs will be"
-                            + " used across covariate effects within each model"
-                            + " space partition");
-                } else {
-                    System.out.println("Fixed priors on effect sizes have been"
-                            + " provided for all covariates");
-                }
-            } else if (arguments.numberOfModelSpacePriorPartitions==1) {
-                System.out.println("Model selection will be performed for "
-                        +(totalNumberOfCovariates-numberOfCovariatesToFixInModel)
-                        +" covariates");
-                // Model space
-                if (arguments.modelSpacePriorFamily==0) {
-                    System.out.println("A Poisson prior on the number of"
-                            + " covariates to include will be used");
-                } else if (arguments.modelSpacePriorFamily==1) {
-                    System.out.println("A Beta-binomial prior on the number of"
-                            + " covariates to include will be used");            
-                }
-                // Covariate effects
-                if (numberOfCovariatesWithInformativePriors==numberOfCovariatesToFixInModel) {
-                    System.out.println("A common prior with unknown SD will be"
-                            + " used across the effects of covariates under"
-                            + " model selection");
-                } else {
-                    System.out.println("Fixed priors on effect sizes have been"
-                            + " provided for all covariates");
-                }
-            }
-            
+            }            
         }
     }
 }

@@ -10,9 +10,10 @@ import umontreal.iro.lecuyer.probdist.UniformDist;
  */
 public class Priors {
     public UniformDist betweenClusterPrecisionUniformPrior;
-    public UniformDist betaSigmaUniformPrior;
+    public UniformDist[] hierarchicalCovariatePriorSd_UniformPrior;
+    public GammaDist[] hierarchicalCovariatePriorPrecision_GammaPrior;
     public UniformDist gaussianResidualUniformPrior;
-    public GammaDist betaPrecisionGammaPrior;
+    public GammaDist betaPrecisionConjugateGammaPrior;
     public GammaDist betweenClusterPrecisionGammaPrior;
     public GammaDist weibullScalePrior;
     public GammaDist gaussianPrecisionGammaPrior;
@@ -22,9 +23,10 @@ public class Priors {
     // Contructor method has name as class
     // NewLikeData data1 = new NewLikeData(m, sg, sa)
     public Priors(Arguments arguments, Data data) {
-        if (data.whichLikelihoodType==LikelihoodTypes.JAM.ordinal()) {
+        if (data.whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()) {
             /***
-             * For JAM this is used as the prior on the variable selection
+             * For conjugate Gaussian models this is the prior on the variable selection
              * coefficient, tau.
              * 
              * tau ~ InvGamma(1/2, n/2) [From P. 586 of Bottolo and Richardson, section 2.2]
@@ -34,21 +36,40 @@ public class Priors {
              * (1/tau) ~ Gamma(1/2, n/2)
              * so will have 1/betaPriorSd^2 ~ Gamma(1/2, n/2)
              */
-            betaPrecisionGammaPrior = new GammaDist(0.5,(double) (data.tau/2));            
-        } else {
-            betaPrecisionGammaPrior = new GammaDist(arguments.betaPrecisionGammaPriorHyperparameter1,
-                    arguments.betaPrecisionGammaPriorHyperparameter2);
-    // SMMR Paper        betaPrecisionUniformPrior = new UniformDist(0,2);
+            betaPrecisionConjugateGammaPrior = new GammaDist(0.5,(double) (data.tau/2));            
         }
+        
         dirichletConcentrationGammaPrior = new GammaDist(
                 arguments.dirichletConcentrationGammaPriorHyperparameter1,
                 arguments.dirichletConcentrationGammaPriorHyperparameter2);
-        betaSigmaUniformPrior = new UniformDist(
-                arguments.betaSigmaUniformPriorHyperparameter1,
-                arguments.betaSigmaUniformPriorHyperparameter2);
+        
+        /**
+         * Hierarchical covariate priors
+         */
+        hierarchicalCovariatePriorSd_UniformPrior = new UniformDist[data.numberOfHierarchicalCovariatePriorPartitions];
+        hierarchicalCovariatePriorPrecision_GammaPrior = new GammaDist[data.numberOfHierarchicalCovariatePriorPartitions];
+        for (int c=0; c<data.numberOfHierarchicalCovariatePriorPartitions; c++) {
+            if (data.hierarchicalCovariatePriorPartitionFamilies[c] == HierarchicalCovariatePriorTypes.UNIFORM.ordinal()) {
+                hierarchicalCovariatePriorSd_UniformPrior[c] = new UniformDist( // SMMR Paper UniformDist(0,2);
+                        data.hierarchicalCovariatePriorSd_UniformHyperparameter1[c],
+                        data.hierarchicalCovariatePriorSd_UniformHyperparameter2[c]);
+            } else if (data.hierarchicalCovariatePriorPartitionFamilies[c] == HierarchicalCovariatePriorTypes.GAMMA.ordinal()) {
+                hierarchicalCovariatePriorPrecision_GammaPrior[c] = new GammaDist(
+                        data.hierarchicalCovariatePriorPrecision_GammaHyperparameter1[c],
+                        data.hierarchicalCovariatePriorPrecision_GammaHyperparameter2[c]);                
+            }
+        }
+        
+        /**
+         * Gaussian residual prior
+         */
         gaussianResidualUniformPrior = new UniformDist(
                 arguments.gaussianResidualUniformPriorHyperparameter1,
                 arguments.gaussianResidualUniformPriorHyperparameter2);
+        
+        /**
+         * Weibull scale prior
+         */
         weibullScalePrior = new GammaDist(arguments.weibullScaleGammaPriorHyperparameter1,
                 arguments.weibullScaleGammaPriorHyperparameter2);
         /**

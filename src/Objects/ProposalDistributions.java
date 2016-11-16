@@ -66,6 +66,7 @@ public class ProposalDistributions {
             adapting[ParameterTypes.ALPHA.ordinal()] = 0;
         } else if (
                 data.whichLikelihoodType==LikelihoodTypes.JAM.ordinal()|
+                data.whichLikelihoodType==LikelihoodTypes.JAMv2.ordinal()|
                 data.whichLikelihoodType==LikelihoodTypes.GAUSSIAN_CONJ.ordinal()
                 ) {
             adapting[ParameterTypes.ALPHA.ordinal()] = 0;            

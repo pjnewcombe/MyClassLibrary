@@ -110,11 +110,6 @@ public class Arguments {
      */
     public double initialBetas;
     /**
-     * Initial values for the unknown prior SDs common to all betas in a
-     * model space component {@link Objects.IterationValues#logBetaPriorSd}.
-     */
-    public double initialBetaPriorSd; // init SD value of beta hyper prior
-    /**
      * Initial value for the Weibull scale parameter {@link Objects.IterationValues#weibullScale}.
      */
     public double initialWeibullScale; // init Weibull scale value
@@ -162,30 +157,6 @@ public class Arguments {
      * {@link Objects.IterationValues#betas}.
      */
     public double betaPriorSd; // log-OR prior sd
-    /**
-     * Which prior family to use for the beta precision (0=uniform, 1=gamma).
-     */
-    public int betaPrecisionPriorFamily; // whether to use uniform or gamma sd prior
-    /**
-     * Hyper-parameter 1 of the Gamma prior on the unknown precision used for
-     * the beta priors.
-     */
-    public double betaSigmaUniformPriorHyperparameter1;
-    /**
-     * Hyper-parameter 2 of the Gamma prior on the unknown precision used for
-     * the beta priors.
-     */
-    public double betaSigmaUniformPriorHyperparameter2;
-    /**
-     * Hyper-parameter 1 of the Gamma prior on the unknown precision used for
-     * the beta priors.
-     */
-    public double betaPrecisionGammaPriorHyperparameter1;
-    /**
-     * Hyper-parameter 2 of the Gamma prior on the unknown precision used for
-     * the beta priors.
-     */
-    public double betaPrecisionGammaPriorHyperparameter2;
     /**
      * Which prior family to use for the Gaussian residuals (0=Jeffreys, 1=Inverse Gamma).
      */
@@ -383,21 +354,6 @@ public class Arguments {
         alphaPriorSd = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
-        betaPrecisionPriorFamily = argScan.nextInt();
-        
-        argumentNameInFile = argScan.next();        
-        betaSigmaUniformPriorHyperparameter1 = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        betaSigmaUniformPriorHyperparameter2 = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        betaPrecisionGammaPriorHyperparameter1 = argScan.nextDouble();
-        
-        argumentNameInFile = argScan.next();        
-        betaPrecisionGammaPriorHyperparameter2 = argScan.nextDouble();
-
-        argumentNameInFile = argScan.next();        
         weibullScaleGammaPriorHyperparameter1 = argScan.nextDouble();
         
         argumentNameInFile = argScan.next();        
@@ -441,9 +397,6 @@ public class Arguments {
         argumentNameInFile = argScan.next();        
         initialBetas = argScan.nextDouble();
         
-        argumentNameInFile = argScan.next();        
-        initialBetaPriorSd = argScan.nextDouble();
-
         argumentNameInFile = argScan.next();        
         initialWeibullScale = argScan.nextDouble();
 
@@ -519,9 +472,6 @@ public class Arguments {
             initialAlpha = argScan.nextDouble();
             argumentNameInFile = argScan.next();        
             initialBetas = argScan.nextDouble();
-            argumentNameInFile = argScan.next();        
-            initialBetaPriorSd = argScan.nextDouble();
-            argumentNameInFile = argScan.next();        
             argumentNameInFile = argScan.next();        
             initialWeibullScale = argScan.nextDouble();            
         }
